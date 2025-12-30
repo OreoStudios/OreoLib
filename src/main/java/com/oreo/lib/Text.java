@@ -98,3 +98,23 @@ public final class Text {
 
     private String toSeparatedCase(char separator) {
         List<String> words = words();
+        return String.join(String.valueOf(separator), words).toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> words() {
+        String normalized = value
+                .replaceAll("([a-z0-9])([A-Z])", "$1 $2")
+                .replaceAll("[^A-Za-z0-9]+", " ")
+                .trim();
+        if (normalized.isEmpty()) return List.of();
+        String[] parts = normalized.split("\\s+");
+        List<String> result = new ArrayList<>(parts.length);
+        Collections.addAll(result, parts);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
+}
