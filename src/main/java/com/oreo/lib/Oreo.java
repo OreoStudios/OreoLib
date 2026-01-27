@@ -98,3 +98,38 @@ public final class Oreo {
 
     public static <T> T retry(int attempts, ThrowingSupplier<T> action) {
         return Attempts.retry(attempts, Duration.ZERO, action);
+    }
+
+    public static <T> T retry(int attempts, Duration delay, ThrowingSupplier<T> action) {
+        return Attempts.retry(attempts, delay, action);
+    }
+
+    public static void repeat(int times, Runnable action) {
+        Checks.require(times >= 0, "times must be >= 0");
+        for (int i = 0; i < times; i++) action.run();
+    }
+
+    public static void sleep(long millis) {
+        Tasks.sleep(millis);
+    }
+
+    public static CompletableFuture<Void> async(Runnable action) {
+        return Tasks.async(action);
+    }
+
+    public static <T> CompletableFuture<T> async(Supplier<T> action) {
+        return Tasks.async(action);
+    }
+
+    public static <T> List<T> where(Iterable<T> source, Predicate<T> predicate) {
+        return Lists.filter(source, predicate);
+    }
+
+    public static <T, R> List<R> map(Iterable<T> source, Function<T, R> mapper) {
+        return Lists.map(source, mapper);
+    }
+
+    public static <T> void each(Iterable<T> source, Consumer<T> consumer) {
+        Lists.each(source, consumer);
+    }
+}
