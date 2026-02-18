@@ -30,3 +30,21 @@ public final class Safe<T> {
     public Safe<T> ifNull(Runnable action) {
         if (value == null) action.run();
         return this;
+    }
+
+    public T orElse(T fallback) {
+        return value != null ? value : fallback;
+    }
+
+    public T orElseGet(Supplier<? extends T> supplier) {
+        return value != null ? value : supplier.get();
+    }
+
+    public Optional<T> optional() {
+        return Optional.ofNullable(value);
+    }
+
+    public T get() {
+        return value;
+    }
+}
