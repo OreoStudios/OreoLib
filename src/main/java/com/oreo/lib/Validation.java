@@ -34,3 +34,13 @@ public final class Validation {
 
     public boolean valid() {
         return errors.isEmpty();
+    }
+
+    public List<String> errors() {
+        return List.copyOf(errors);
+    }
+
+    public void throwIfInvalid() {
+        if (!errors.isEmpty()) throw new IllegalArgumentException(String.join("; ", errors));
+    }
+}
