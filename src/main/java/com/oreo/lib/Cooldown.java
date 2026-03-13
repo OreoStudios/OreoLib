@@ -30,3 +30,24 @@ public final class Cooldown<K> {
 
     public long remainingMillis(K key) {
         Long blockedUntil = nextUse.get(key);
+        if (blockedUntil == null) return 0;
+        long remaining = blockedUntil - System.currentTimeMillis();
+        if (remaining <= 0) {
+            nextUse.remove(key);
+            return 0;
+        }
+        return remaining;
+    }
+
+    public Duration remaining(K key) {
+        return Duration.ofMillis(remainingMillis(key));
+    }
+
+    public void reset(K key) {
+        nextUse.remove(key);
+    }
+
+    public void clear() {
+        nextUse.clear();
+    }
+}
