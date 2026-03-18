@@ -56,6 +56,14 @@ public final class Result<T> {
         }
     }
 
+    public Result<T> success(Consumer<T> consumer) {
+        return onSuccess(consumer);
+    }
+
+    public Result<T> failure(Consumer<Exception> consumer) {
+        return onError(consumer);
+    }
+
     public Result<T> onSuccess(Consumer<T> consumer) {
         if (ok()) consumer.accept(value);
         return this;
