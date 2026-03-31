@@ -23,10 +23,3 @@ public final class Example {
 
         each(shortNames, Console::println);
         Console.println(content);
-
-        String retried = retry(3, Duration.ofMillis(50), () -> "success");
-        Console.println(retried);
-
-        async(() -> Console.println("Running async!"));
-    }
-}
