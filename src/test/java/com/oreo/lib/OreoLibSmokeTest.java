@@ -98,3 +98,5 @@ public final class OreoLibSmokeTest {
     }
 
     private record Profile(String name) {}
+    private record User(Profile profile) {}
+}
