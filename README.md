@@ -27,3 +27,103 @@ Then use:
 <dependency>
     <groupId>com.oreo</groupId>
     <artifactId>oreolib</artifactId>
+    <version>1.1.0</version>
+</dependency>
+```
+
+## Output
+
+```java
+out("Hello");
+out("Player:", name, "Level:", level);
+print("Loading...");
+outf("Money: %.2f", money);
+info("Started");
+success("Saved");
+warn("Low memory");
+error("Failed");
+```
+
+## Short if / else
+
+```java
+when(player.isAdmin(),
+    () -> out("Admin"),
+    () -> out("Player")
+);
+
+String rank = choose(player.isAdmin(), "ADMIN", "PLAYER");
+```
+
+For else-if style logic around a value:
+
+```java
+when(score)
+    .is(v -> v >= 100, () -> out("Legend"))
+    .is(v -> v >= 50, () -> out("Pro"))
+    .otherwise(() -> out("Beginner"));
+```
+
+## Short switch / case
+
+```java
+match(status)
+    .caseOf(ONLINE, () -> out("Online"))
+    .caseOf(OFFLINE, () -> out("Offline"))
+    .caseOf(BANNED, () -> out("Banned"))
+    .otherwise(() -> out("Unknown"));
+```
+
+Predicate-based matching is also supported:
+
+```java
+match(score)
+    .caseWhen(v -> v >= 100, () -> out("Legend"))
+    .caseWhen(v -> v >= 50, () -> out("Pro"))
+    .otherwise(() -> out("Beginner"));
+```
+
+## Null-safe chains
+
+```java
+String name = safe(player)
+    .map(Player::getProfile)
+    .map(Profile::getName)
+    .orElse("Unknown");
+```
+
+```java
+String name = or(configName, "Steve");
+String first = firstNonNull(databaseName, configName, "Steve");
+```
+
+## Collection pipelines
+
+```java
+List<String> names = from(players)
+    .where(Player::isOnline)
+    .where(p -> p.getLevel() >= 10)
+    .map(Player::getName)
+    .sorted()
+    .list();
+```
+
+Pipeline helpers include `where`, `map`, `distinct`, `sorted`, `take`, `skip`, `each`, `firstOr`, `count`, `any`, `all`, and `list`.
+
+## Short maps, lists and loops
+
+```java
+var names = list("Alex", "Steve", "Elias");
+
+Map<String, Integer> fruit = mapOf(
+    "apple", 5,
+    "banana", 10,
+    "orange", 4
+);
+
+repeat(5, () -> out("Hello"));
+times(10, i -> out(i));
+```
+
+## Validation
+
