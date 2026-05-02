@@ -127,3 +127,103 @@ times(10, i -> out(i));
 
 ## Validation
 
+Fail immediately:
+
+```java
+require("username", username)
+    .notNull()
+    .notBlank()
+    .notEmpty();
+
+require("age", age)
+    .min(18)
+    .max(120);
+```
+
+Collect multiple validation errors:
+
+```java
+validate()
+    .notBlank(username, "Username")
+    .min(age, 18, "Age")
+    .check(passwordsMatch, "Passwords must match")
+    .throwIfInvalid();
+```
+
+## Try/catch without boilerplate
+
+```java
+int port = attempt(() -> Integer.parseInt(value))
+    .orElse(25565);
+```
+
+```java
+attempt(() -> save())
+    .success(v -> success("Saved"))
+    .failure(e -> error(e.getMessage()));
+```
+
+The older `tryGet`, `tryRun`, `onSuccess`, and `onError` APIs remain available.
+
+## Retry
+
+```java
+String data = retry(3, () -> loadData());
+```
+
+```java
+String data = retry(5)
+    .delay(1000)
+    .get(() -> loadData());
+```
+
+```java
+retry(3)
+    .delay(500)
+    .run(() -> reconnect());
+```
+
+## Cache
+
+```java
+OreoCache<UUID, User> users = Oreo.<UUID, User>cache()
+    .expireAfter(Duration.ofMinutes(10));
+
+User user = users.get(uuid, () -> database.load(uuid));
+```
+
+## Cooldowns
+
+```java
+Cooldown<UUID> teleport = Oreo.<UUID>cooldown(30, TimeUnit.SECONDS);
+
+if (teleport.use(player.getUniqueId())) {
+    teleport(player);
+} else {
+    out("Wait", teleport.remaining(player.getUniqueId()));
+}
+```
+
+## Timing
+
+```java
+timed("Loading world", () -> loadWorld());
+World world = timed("Loading world", () -> loadWorld());
+```
+
+## Files
+
+```java
+String value = read("config.txt");
+write("config.txt", "hello");
+append("config.txt", "world");
+```
+
+## Async and sleep
+
+```java
+async(() -> expensiveTask());
+CompletableFuture<String> result = async(() -> loadSomething());
+sleep(1000);
+```
+
