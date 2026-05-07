@@ -227,3 +227,54 @@ CompletableFuture<String> result = async(() -> loadSomething());
 sleep(1000);
 ```
 
+## Text helper
+
+```java
+String value = text("  HELLO OREO WORLD  ")
+    .trim()
+    .lower()
+    .camelCase()
+    .get();
+```
+
+## Main classes
+
+| Type | Purpose |
+| --- | --- |
+| `Oreo` | Static facade for commonly used helpers |
+| `Match<T>` | Compact switch-like matching |
+| `WhenValue<T>` | Fluent if / else-if chains |
+| `Safe<T>` | Null-safe value chaining |
+| `Flow<T>` | Collection pipelines |
+| `Requirement<T>` / `Validation` | Validation helpers |
+| `OreoCache<K,V>` | Optional-expiry cache |
+| `Cooldown<K>` | Keyed cooldowns |
+| `Retry` / `Attempts` | Retry helpers |
+| `Result<T>` | Exception-aware operation results |
+| `Console` | Short console input/output |
+| `Text` | Fluent text operations |
+| `Lists` | Collection shortcuts |
+| `OreoFiles` | UTF-8 file helpers |
+| `Tasks` | Async and sleep helpers |
+| `Stopwatch` | Timing |
+| `Chain<T>` | Generic value chaining |
+
+## Backward compatibility
+
+OreoLib 1.1.0 keeps the 1.0.x APIs, including `out`, `text`, `list`, `range`, `chain`, `read`, `write`, `append`, `tryRun`, `tryGet`, `retry`, `repeat`, `sleep`, `async`, `where`, `map`, and `each`.
+
+## Build from source
+
+```bash
+mvn clean package
+```
+
+The build creates:
+
+- `target/oreolib-1.1.0.jar`
+- `target/oreolib-1.1.0-sources.jar`
+- `target/OreoLib-1.1.0.zip`
+
+## Design goal
+
+If an OreoLib helper is longer or less readable than normal Java, use normal Java instead. OreoLib is meant to remove boilerplate, not hide application logic.
