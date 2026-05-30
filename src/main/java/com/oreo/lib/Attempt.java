@@ -98,3 +98,81 @@ public final class Attempt<T> {
     }
 
     public <R> Attempt<R> map(Function<? super T, ? extends R> mapper) {
+        Checks.notNull(mapper, "mapper");
+        return Attempt.of(() -> mapper.apply(get()));
+    }
+
+    public Optional<T> optional() {
+        resolve();
+        return error == null ? Optional.ofNullable(value) : Optional.empty();
+    }
+
+    public Exception error() {
+        resolve();
+        return error;
+    }
+
+    private synchronized void resolve() {
+        if (resolved) return;
+
+        for (int currentAttempt = 1; currentAttempt <= maximumAttempts; currentAttempt++) {
+            try {
+                value = operation.get();
+                error = null;
+                resolved = true;
+                return;
+            } catch (Exception failure) {
+                error = failure;
+                if (currentAttempt < maximumAttempts && !delay.isZero()) {
+                    Tasks.sleep(delay.toMillis());
+                }
+            }
+        }
+
+        resolved = true;
+    }
+
+    private void ensureConfigurable() {
+        if (resolved) throw new IllegalStateException("attempt has already run");
+    }
+
+    public final class Count {
+        private final int count;
+
+        private Count(int count) {
+            this.count = count;
+        }
+
+        public Attempt<T> times() {
+            ensureConfigurable();
+            maximumAttempts = count;
+            return Attempt.this;
+        }
+    }
+
+    public final class Waiting {
+        private final long amount;
+
+        private Waiting(long amount) {
+            this.amount = amount;
+        }
+
+        public Attempt<T> milliseconds() {
+            return using(Duration.ofMillis(amount));
+        }
+
+        public Attempt<T> seconds() {
+            return using(Duration.ofSeconds(amount));
+        }
+
+        public Attempt<T> minutes() {
+            return using(Duration.ofMinutes(amount));
+        }
+
+        private Attempt<T> using(Duration duration) {
+            ensureConfigurable();
+            delay = duration;
+            return Attempt.this;
+        }
+    }
+}
