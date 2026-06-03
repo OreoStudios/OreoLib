@@ -92,4 +92,8 @@ public final class Flow<T> {
     public List<T> list() {
         return new ArrayList<>(values);
     }
+
+    public List<T> toList() {
+        return list();
+    }
 }

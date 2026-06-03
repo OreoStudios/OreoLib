@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -48,10 +49,3 @@ public final class Lists {
     public static <T> T firstOr(Iterable<T> source, T fallback) {
         for (T item : source) return item;
         return fallback;
-    }
-
-    public static <T> T firstWhere(Iterable<T> source, Predicate<T> predicate, T fallback) {
-        for (T item : source) if (predicate.test(item)) return item;
-        return fallback;
-    }
-}
