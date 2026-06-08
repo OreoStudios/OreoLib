@@ -49,3 +49,18 @@ public final class Lists {
     public static <T> T firstOr(Iterable<T> source, T fallback) {
         for (T item : source) return item;
         return fallback;
+    }
+
+    public static <T> T firstWhere(Iterable<T> source, Predicate<T> predicate, T fallback) {
+        for (T item : source) if (predicate.test(item)) return item;
+        return fallback;
+    }
+
+    public static <T> T chooseOne(Iterable<? extends T> source) {
+        Checks.notNull(source, "source");
+        List<T> values = new ArrayList<>();
+        for (T item : source) values.add(item);
+        Checks.require(!values.isEmpty(), "source must not be empty");
+        return values.get(ThreadLocalRandom.current().nextInt(values.size()));
+    }
+}
