@@ -34,6 +34,10 @@ public final class Oreo {
         if (condition) action.run();
     }
 
+    public static WhenCondition when(boolean condition) {
+        return new WhenCondition(condition);
+    }
+
     public static void when(boolean condition, Runnable yes, Runnable no) {
         if (condition) yes.run(); else no.run();
     }
@@ -64,3 +68,39 @@ public final class Oreo {
 
     @SafeVarargs
     public static <T> T firstNonNull(T... values) {
+        if (values == null) return null;
+        for (T value : values) if (value != null) return value;
+        return null;
+    }
+
+    public static Text text(String value) { return Text.of(value); }
+
+    @SafeVarargs
+    public static <T> List<T> list(T... values) { return Lists.of(values); }
+
+    public static List<Integer> range(int startInclusive, int endExclusive) {
+        return Lists.range(startInclusive, endExclusive);
+    }
+
+    public static <T> Flow<T> from(Iterable<T> source) {
+        return Flow.from(source);
+    }
+
+    public static <T> T chooseOneFrom(Iterable<? extends T> source) {
+        return Lists.chooseOne(source);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <K, V> Map<K, V> mapOf(K firstKey, V firstValue, Object... rest) {
+        if (rest.length % 2 != 0) throw new IllegalArgumentException("mapOf requires key/value pairs");
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(firstKey, firstValue);
+        for (int i = 0; i < rest.length; i += 2) map.put((K) rest[i], (V) rest[i + 1]);
+        return map;
+    }
+
+    public static <T> List<T> where(Iterable<T> source, Predicate<T> predicate) {
+        return Lists.filter(source, predicate);
+    }
+
+    public static <T, R> List<R> map(Iterable<T> source, Function<T, R> mapper) {
