@@ -104,3 +104,88 @@ public final class Oreo {
     }
 
     public static <T, R> List<R> map(Iterable<T> source, Function<T, R> mapper) {
+        return Lists.map(source, mapper);
+    }
+
+    public static <T> void each(Iterable<T> source, Consumer<T> consumer) {
+        Lists.each(source, consumer);
+    }
+
+    public static void repeat(int times, Runnable action) {
+        Checks.require(times >= 0, "times must be >= 0");
+        for (int i = 0; i < times; i++) action.run();
+    }
+
+    public static Repetition repeat(int times) {
+        return new Repetition(times);
+    }
+
+    public static void times(int times, Consumer<Integer> action) {
+        Checks.require(times >= 0, "times must be >= 0");
+        for (int i = 0; i < times; i++) action.accept(i);
+    }
+
+    public static <T> Chain<T> chain(T value) { return Chain.of(value); }
+
+    public static String read(String path) { return OreoFiles.read(path); }
+    public static String read(Path path) { return OreoFiles.read(path); }
+    public static void write(String path, String content) { OreoFiles.write(path, content); }
+    public static void append(String path, String content) { OreoFiles.append(path, content); }
+
+    public static OreoFile file(String path) { return new OreoFile(Path.of(path)); }
+    public static OreoFile file(Path path) { return new OreoFile(path); }
+
+    public static Result<Void> tryRun(ThrowingRunnable action) { return Result.run(action); }
+    public static <T> Result<T> tryGet(ThrowingSupplier<T> action) { return Result.of(action); }
+    public static Attempt<Void> attempt(ThrowingRunnable action) { return Attempt.run(action); }
+    public static <T> Attempt<T> attempt(ThrowingSupplier<T> action) { return Attempt.of(action); }
+
+    public static <T> T retry(int attempts, ThrowingSupplier<T> action) {
+        return Attempts.retry(attempts, Duration.ZERO, action);
+    }
+
+    public static <T> T retry(int attempts, Duration delay, ThrowingSupplier<T> action) {
+        return Attempts.retry(attempts, delay, action);
+    }
+
+    public static Retry retry(int attempts) { return new Retry(attempts); }
+
+    public static <T> Requirement<T> require(T value) { return new Requirement<>(value, "value"); }
+    public static <T> Requirement<T> require(String name, T value) { return new Requirement<>(value, name); }
+    public static Validation validate() { return new Validation(); }
+    public static <T> ValueCheck<T> is(T value) { return new ValueCheck<>(value); }
+    public static <T extends Number & Comparable<T>> NumberCheck<T> number(T value) {
+        return new NumberCheck<>(value);
+    }
+
+    public static long timed(String label, Runnable action) {
+        long millis = Stopwatch.measure(action);
+        out(label, "took", millis + "ms");
+        return millis;
+    }
+
+    public static <T> T timed(String label, Supplier<T> action) {
+        Stopwatch sw = Stopwatch.start();
+        T result = action.get();
+        out(label, "took", sw.millis() + "ms");
+        return result;
+    }
+
+    public static void sleep(long millis) { Tasks.sleep(millis); }
+    public static CompletableFuture<Void> async(Runnable action) { return Tasks.async(action); }
+    public static <T> CompletableFuture<T> async(Supplier<T> action) { return Tasks.async(action); }
+    public static Delay waitFor(long amount) { return new Delay(amount); }
+    public static AsyncTask<Void> runAsync(Runnable action) { return AsyncTask.run(action); }
+    public static <T> AsyncTask<T> supplyAsync(Supplier<T> action) { return AsyncTask.supply(action); }
+    public static Every every(long amount) { return new Every(amount); }
+
+    public static Setting setting(String key) { return new Setting(key); }
+
+    public static <K, V> OreoCache<K, V> cache() { return new OreoCache<>(); }
+
+    public static <K> Cooldown<K> cooldown(Duration duration) { return new Cooldown<>(duration); }
+
+    public static <K> Cooldown<K> cooldown(long amount, TimeUnit unit) {
+        return new Cooldown<>(Duration.ofMillis(unit.toMillis(amount)));
+    }
+}

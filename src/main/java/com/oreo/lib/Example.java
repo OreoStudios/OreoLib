@@ -34,18 +34,3 @@ public final class Example {
                 .map(Profile::name)
                 .orElse("Unknown");
         out(nested);
-
-        int port = attempt(() -> Integer.parseInt("25565")).orElse(25565);
-        out("Port:", port);
-
-        OreoCache<String, String> cache = Oreo.<String, String>cache()
-                .expireAfter(Duration.ofMinutes(10));
-        out(cache.get("motd", () -> "Welcome!"));
-
-        Cooldown<String> cooldown = Oreo.<String>cooldown(30, TimeUnit.SECONDS);
-        out("Can use:", cooldown.use("player"));
-    }
-
-    private record Profile(String name) {}
-    private record User(Profile profile) {}
-}
