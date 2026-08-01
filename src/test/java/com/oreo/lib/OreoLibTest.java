@@ -96,3 +96,87 @@ class OreoLibTest {
         assertThrows(IllegalArgumentException.class, () -> number(10).isBetween(20, 1));
     }
 
+    @Test
+    void typedSettingsUseSystemPropertiesAndFallbacks() {
+        String key = "oreolib.test.port";
+        String oldValue = System.getProperty(key);
+        try {
+            System.setProperty(key, "25565");
+            assertTrue(setting(key).exists());
+            assertEquals(25565, setting(key).asInteger().orElse(0));
+            assertEquals(7, setting("oreolib.missing.setting").asInteger().orElse(7));
+        } finally {
+            if (oldValue == null) System.clearProperty(key);
+            else System.setProperty(key, oldValue);
+        }
+    }
+
+    @Test
+    void asyncTasksExposeSuccessAndFailureCallbacks() {
+        AtomicInteger completed = new AtomicInteger();
+        runAsync(completed::incrementAndGet)
+                .whenDone(completed::incrementAndGet)
+                .whenFailed(error -> fail(error.getMessage()))
+                .await();
+        assertEquals(2, completed.get());
+
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        AsyncTask<Void> failedTask = runAsync(() -> {
+            throw new IllegalStateException("boom");
+        }).whenFailed(failure::set);
+
+        assertThrows(CompletionException.class, failedTask::await);
+        assertInstanceOf(IllegalStateException.class, failure.get());
+    }
+
+    @Test
+    void recurringTasksCanBeCancelled() throws InterruptedException {
+        CountDownLatch ran = new CountDownLatch(1);
+        ScheduledTask task = every(1).milliseconds().run(ran::countDown);
+        try {
+            assertTrue(ran.await(2, TimeUnit.SECONDS));
+        } finally {
+            task.close();
+        }
+        assertTrue(task.isCancelled());
+    }
+
+    @Test
+    void readableWaitingUsesTheRequestedUnit() {
+        long started = System.nanoTime();
+        waitFor(1).milliseconds();
+        assertTrue(System.nanoTime() >= started);
+    }
+
+    @Test
+    void existingFluentApisRemainAvailable() {
+        AtomicInteger branch = new AtomicInteger();
+        match("ONLINE")
+                .caseOf("OFFLINE", () -> branch.set(1))
+                .caseOf("ONLINE", () -> branch.set(2))
+                .otherwise(() -> branch.set(3));
+        assertEquals(2, branch.get());
+
+        String nested = safe(new User(new Profile("Oreo")))
+                .map(User::profile)
+                .map(Profile::name)
+                .orElse("Unknown");
+        assertEquals("Oreo", nested);
+
+        Map<String, Integer> fruit = mapOf("apple", 5, "banana", 10);
+        assertEquals(10, fruit.get("banana"));
+
+        OreoCache<String, Integer> cache = Oreo.<String, Integer>cache()
+                .expireAfter(Duration.ofMinutes(1));
+        AtomicInteger loads = new AtomicInteger();
+        assertEquals(1, cache.get("x", loads::incrementAndGet));
+        assertEquals(1, cache.get("x", loads::incrementAndGet));
+
+        Cooldown<String> cooldown = Oreo.<String>cooldown(1, TimeUnit.SECONDS);
+        assertTrue(cooldown.use("player"));
+        assertFalse(cooldown.use("player"));
+    }
+
+    private record Profile(String name) {}
+    private record User(Profile profile) {}
+}
