@@ -122,3 +122,103 @@ OreoFile config = file("config.txt")
 
 String content = config.readText().orElse("enabled=false");
 
+if (config.exists()) {
+    out(content);
+}
+```
+
+The shorter `read`, `write`, and `append` methods remain available for direct operations.
+
+### Readable checks
+
+```java
+if (is(status).equalTo("ONLINE")) {
+    out("Ready");
+}
+
+boolean allowed = is(role).oneOf("ADMIN", "MODERATOR");
+boolean validLevel = number(level).isBetween(1, 100);
+boolean hasCoins = number(coins).isPositive();
+```
+
+Use `require(...)` when an invalid value should throw immediately:
+
+```java
+require("username", username)
+    .notNull()
+    .notBlank()
+    .notEmpty();
+
+require("age", age)
+    .min(18)
+    .max(120);
+```
+
+### Async tasks
+
+```java
+runAsync(() -> saveData())
+    .whenDone(() -> success("Saved"))
+    .whenFailed(error -> warn(error.getMessage()));
+
+AsyncTask<String> task = supplyAsync(() -> loadData());
+String data = task.await();
+```
+
+Use `future()` when you need the underlying `CompletableFuture`.
+
+### Recurring tasks
+
+```java
+ScheduledTask autosave = every(5).minutes().run(() -> saveData());
+
+// Stop it when it is no longer needed.
+autosave.close();
+```
+
+Recurring tasks use a daemon scheduler, and each call returns a cancellable `ScheduledTask`.
+
+### Random choices
+
+```java
+String winner = chooseOneFrom(players);
+```
+
+An empty collection throws `IllegalArgumentException` instead of returning an unexpected `null`.
+
+### Settings
+
+Settings are resolved from a matching Java system property first, followed by an environment variable. Environment names are also checked in uppercase underscore form, so `server.port` can resolve `SERVER_PORT`.
+
+```java
+int port = setting("server.port")
+    .asInteger()
+    .orElse(25565);
+
+boolean debug = setting("debug")
+    .asBoolean()
+    .orElse(false);
+```
+
+Supported conversions are `asText`, `asInteger`, `asLong`, `asDouble`, and `asBoolean`.
+
+## Additional utilities
+
+### Console output
+
+```java
+out("Player:", name, "Level:", level);
+outf("Money: %.2f", money);
+info("Started");
+success("Saved");
+warn("Low memory");
+error("Failed");
+```
+
+### Null-safe chains
+
+```java
+String name = safe(player)
+    .map(Player::getProfile)
+    .map(Profile::getName)
+    .orElse("Unknown");
