@@ -222,3 +222,90 @@ String name = safe(player)
     .map(Player::getProfile)
     .map(Profile::getName)
     .orElse("Unknown");
+
+String first = firstNonNull(databaseName, configName, "Steve");
+```
+
+### Lists and maps
+
+```java
+List<String> names = list("Alex", "Steve", "Elias");
+
+Map<String, Integer> fruit = mapOf(
+    "apple", 5,
+    "banana", 10,
+    "orange", 4
+);
+```
+
+### Text
+
+```java
+String value = text("  HELLO OREO WORLD  ")
+    .trim()
+    .lower()
+    .camelCase()
+    .get();
+```
+
+### Cache and cooldowns
+
+```java
+OreoCache<UUID, User> users = Oreo.<UUID, User>cache()
+    .expireAfter(Duration.ofMinutes(10));
+
+User user = users.get(uuid, () -> database.load(uuid));
+```
+
+```java
+Cooldown<UUID> teleport = Oreo.<UUID>cooldown(30, TimeUnit.SECONDS);
+
+if (teleport.use(player.getUniqueId())) {
+    teleport(player);
+} else {
+    out("Wait", teleport.remaining(player.getUniqueId()));
+}
+```
+
+## API overview
+
+| Type | Purpose |
+| --- | --- |
+| `Oreo` | Static entry point for the short API |
+| `WhenCondition` / `WhenValue<T>` | Fluent true/false and value-based decisions |
+| `Match<T>` | Switch-like matching |
+| `Repetition` / `Delay` | Readable repetition and waiting |
+| `Attempt<T>` / `Retry` | Exception handling, fallbacks, and retries |
+| `Flow<T>` | Collection pipelines |
+| `OreoFile` | Fluent UTF-8 file operations |
+| `ValueCheck<T>` / `NumberCheck<T>` | Readable boolean checks |
+| `Requirement<T>` / `Validation` | Fail-fast or collected validation |
+| `AsyncTask<T>` | Async completion and failure callbacks |
+| `ScheduledTask` | Cancellable recurring tasks |
+| `Setting` | Typed system property and environment lookup |
+| `Safe<T>` | Null-safe value chaining |
+| `Text` | Fluent text transformations |
+| `OreoCache<K,V>` | Optional-expiry cache |
+| `Cooldown<K>` | Keyed cooldowns |
+
+## Backward compatibility
+
+OreoLib 1.2.0 keeps the original 1.0.x and 1.1.x helpers, including `out`, `text`, `list`, `range`, `chain`, `read`, `write`, `append`, `tryRun`, `tryGet`, `retry`, `repeat`, `sleep`, `async`, `where`, `map`, `each`, `match`, `safe`, validation, cache, and cooldown APIs.
+
+## Build from source
+
+```bash
+mvn clean package
+```
+
+The build runs the test suite and creates:
+
+- `target/oreolib-1.2.0.jar`
+- `target/oreolib-1.2.0-sources.jar`
+- `target/OreoLib-1.2.0.zip`
+
+The release ZIP contains this README, the compiled library, and the source archive.
+
+## Design goal
+
+If an OreoLib helper is longer or less readable than normal Java, use normal Java. OreoLib removes boilerplate; it does not hide application logic.
