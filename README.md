@@ -1,5 +1,7 @@
 # OreoLib
 
+[![JitPack](https://jitpack.io/v/el211/OreoLib.svg)](https://jitpack.io/#el211/OreoLib)
+
 OreoLib is a lightweight, dependency-free Java 17 utility library designed to make code read closer to plain English.
 
 ```java
@@ -13,7 +15,43 @@ import static com.oreo.lib.Oreo.*;
 
 ## Installation
 
-Download `oreolib-1.2.0.jar` from the [latest GitHub release](https://github.com/el211/OreoLib/releases/latest), or clone and install the project locally:
+### Maven with JitPack
+
+Add the JitPack repository and OreoLib dependency:
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.github.el211</groupId>
+        <artifactId>OreoLib</artifactId>
+        <version>v1.2.0</version>
+    </dependency>
+</dependencies>
+```
+
+### Gradle with JitPack
+
+```groovy
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+
+dependencies {
+    implementation "com.github.el211:OreoLib:v1.2.0"
+}
+```
+
+### Local installation
+
+You can also download `oreolib-1.2.0.jar` from the [GitHub releases](https://github.com/el211/OreoLib/releases), or clone and install the project locally:
 
 ```bash
 git clone https://github.com/el211/OreoLib.git
@@ -21,7 +59,7 @@ cd OreoLib
 mvn clean install
 ```
 
-Then add it to your Maven project:
+The locally installed Maven coordinates are:
 
 ```xml
 <dependency>
