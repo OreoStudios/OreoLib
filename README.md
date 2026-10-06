@@ -31,7 +31,7 @@ Add the JitPack repository and OreoLib dependency:
     <dependency>
         <groupId>com.github.el211</groupId>
         <artifactId>OreoLib</artifactId>
-        <version>v1.2.0</version>
+        <version>v1.3.0</version>
     </dependency>
 </dependencies>
 ```
@@ -45,13 +45,13 @@ repositories {
 }
 
 dependencies {
-    implementation "com.github.el211:OreoLib:v1.2.0"
+    implementation "com.github.el211:OreoLib:v1.3.0"
 }
 ```
 
 ### Local installation
 
-You can also download `oreolib-1.2.0.jar` from the [GitHub releases](https://github.com/el211/OreoLib/releases), or clone and install the project locally:
+You can also download `oreolib-1.3.0.jar` from the [GitHub releases](https://github.com/el211/OreoLib/releases), or clone and install the project locally:
 
 ```bash
 git clone https://github.com/el211/OreoLib.git
@@ -65,7 +65,7 @@ The locally installed Maven coordinates are:
 <dependency>
     <groupId>com.oreo</groupId>
     <artifactId>oreolib</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -328,7 +328,33 @@ if (teleport.use(player.getUniqueId())) {
 
 ## Backward compatibility
 
-OreoLib 1.2.0 keeps the original 1.0.x and 1.1.x helpers, including `out`, `text`, `list`, `range`, `chain`, `read`, `write`, `append`, `tryRun`, `tryGet`, `retry`, `repeat`, `sleep`, `async`, `where`, `map`, `each`, `match`, `safe`, validation, cache, and cooldown APIs.
+OreoLib 1.3.0 keeps the original 1.0.x, 1.1.x, and 1.2.x helpers, including `out`, `text`, `list`, `range`, `chain`, `read`, `write`, `append`, `tryRun`, `tryGet`, `retry`, `repeat`, `sleep`, `async`, `where`, `map`, `each`, `match`, `safe`, validation, cache, and cooldown APIs.
+
+## What's new in 1.3.0
+
+Math and aggregate helpers for the cases plain Java makes verbose:
+
+```java
+health = clamp(health + regen, 0f, MAX_HEALTH);
+float eased = lerp(start, end, t);
+float barWidth = fraction(health, 0f, MAX_HEALTH); // 0..1
+
+loop(36, i -> slots[i] = ItemStack.empty());        // index loop, no boxing
+
+int total = sumBy(slots, ItemStack::count);
+int online = countWhere(players, Player::isOnline);
+```
+
+`Flow` gained numeric and terminal operations so a pipeline stays one chain:
+
+```java
+int gold = from(slots).sumInt(ItemStack::count);
+String names = from(players).map(Player::getName).join(", ");
+Player top = from(players).maxBy(comparingInt(Player::getScore), null);
+String last = from(history).reversed().firstOr("none");
+```
+
+New `Flow` methods: `sumInt`, `sumDouble`, `countWhere`, `join`, `maxBy`, `minBy`, `reversed`, `lastOr`, `toSet`.
 
 ## Build from source
 
