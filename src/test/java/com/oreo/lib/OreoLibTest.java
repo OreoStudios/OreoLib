@@ -35,6 +35,29 @@ class OreoLibTest {
     }
 
     @Test
+    void mathAndAggregateHelpersReadNaturally() {
+        assertEquals(5, clamp(10, 0, 5));
+        assertEquals(0, clamp(-3, 0, 5));
+        assertEquals(3, clamp(3, 0, 5));
+        assertEquals(5f, lerp(0f, 10f, 0.5f));
+        assertEquals(0.5f, fraction(50f, 0f, 100f));
+        assertEquals(1f, fraction(999f, 0f, 100f));
+
+        AtomicInteger sum = new AtomicInteger();
+        loop(4, sum::addAndGet);
+        assertEquals(6, sum.get());
+
+        List<String> words = list("a", "bb", "ccc");
+        assertEquals(6, sumBy(words, String::length));
+        assertEquals(2, countWhere(words, w -> w.length() >= 2));
+        assertEquals(6, from(words).sumInt(String::length));
+        assertEquals("a,bb,ccc", from(words).join(","));
+        assertEquals("ccc", from(words).maxBy(java.util.Comparator.comparingInt(String::length), ""));
+        assertEquals("ccc", from(words).reversed().firstOr(""));
+        assertEquals("ccc", from(words).lastOr(""));
+    }
+
+    @Test
     void attemptsAreLazyRetryableAndCached() {
         AtomicInteger calls = new AtomicInteger();
         Attempt<String> operation = attempt(() -> {

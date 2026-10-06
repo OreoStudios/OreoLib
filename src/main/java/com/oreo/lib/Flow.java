@@ -1,6 +1,7 @@
 package com.oreo.lib;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -8,6 +9,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
 
 /** Lightweight eager collection pipeline for concise everyday transformations. */
 public final class Flow<T> {
@@ -71,12 +74,64 @@ public final class Flow<T> {
         return this;
     }
 
+    public Flow<T> reversed() {
+        List<T> out = new ArrayList<>(values);
+        Collections.reverse(out);
+        return new Flow<>(out, false);
+    }
+
     public T firstOr(T fallback) {
         return values.isEmpty() ? fallback : values.get(0);
     }
 
+    public T lastOr(T fallback) {
+        return values.isEmpty() ? fallback : values.get(values.size() - 1);
+    }
+
     public long count() {
         return values.size();
+    }
+
+    public long countWhere(Predicate<? super T> predicate) {
+        long total = 0;
+        for (T item : values) if (predicate.test(item)) total++;
+        return total;
+    }
+
+    /** Sums an int property across every element. */
+    public int sumInt(ToIntFunction<? super T> property) {
+        int total = 0;
+        for (T item : values) total += property.applyAsInt(item);
+        return total;
+    }
+
+    /** Sums a double property across every element. */
+    public double sumDouble(ToDoubleFunction<? super T> property) {
+        double total = 0;
+        for (T item : values) total += property.applyAsDouble(item);
+        return total;
+    }
+
+    public T maxBy(Comparator<? super T> comparator, T fallback) {
+        T best = null;
+        for (T item : values) if (best == null || comparator.compare(item, best) > 0) best = item;
+        return best == null ? fallback : best;
+    }
+
+    public T minBy(Comparator<? super T> comparator, T fallback) {
+        T best = null;
+        for (T item : values) if (best == null || comparator.compare(item, best) < 0) best = item;
+        return best == null ? fallback : best;
+    }
+
+    /** Joins the elements' text with a separator. */
+    public String join(String separator) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) sb.append(separator);
+            sb.append(values.get(i));
+        }
+        return sb.toString();
     }
 
     public boolean any(Predicate<? super T> predicate) {
@@ -95,5 +150,9 @@ public final class Flow<T> {
 
     public List<T> toList() {
         return list();
+    }
+
+    public Set<T> toSet() {
+        return new LinkedHashSet<>(values);
     }
 }
