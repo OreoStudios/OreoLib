@@ -5,8 +5,12 @@ import com.oreo.lib.OreoException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /** Reflective mapping between an annotated entity class and a table. Package-private. */
 final class EntityInfo<T> {
@@ -16,6 +20,7 @@ final class EntityInfo<T> {
     final List<String> columns = new ArrayList<>();
     Field idField;
     String idColumn;
+    boolean idGenerated;
 
     private EntityInfo(Class<T> type) {
         this.type = type;
@@ -31,11 +36,20 @@ final class EntityInfo<T> {
             if (field.isAnnotationPresent(Id.class)) {
                 idField = field;
                 idColumn = column;
+                idGenerated = field.isAnnotationPresent(GeneratedValue.class)
+                    || isAutoNumericId(field);
             }
         }
         if (fields.isEmpty()) {
             throw new OreoException("Entity " + type.getName() + " has no mapped fields");
         }
+    }
+
+    // A numeric id with no @GeneratedValue is still treated as DB-generated, matching the
+    // original behaviour (empty/0 -> INSERT). Non-numeric ids (e.g. UUID) are app-assigned.
+    private static boolean isAutoNumericId(Field field) {
+        Class<?> t = field.getType();
+        return t == int.class || t == Integer.class || t == long.class || t == Long.class;
     }
 
     static <T> EntityInfo<T> of(Class<T> type) {
@@ -98,18 +112,69 @@ final class EntityInfo<T> {
         return value instanceof Number number && number.longValue() == 0L;
     }
 
-    String sqlType(Class<?> target) {
+    // ---- column metadata (from @Column) ----
+
+    boolean nullable(Field field) {
+        Column column = field.getAnnotation(Column.class);
+        return column == null || column.nullable();
+    }
+
+    boolean unique(Field field) {
+        Column column = field.getAnnotation(Column.class);
+        return column != null && column.unique();
+    }
+
+    boolean updatable(Field field) {
+        Column column = field.getAnnotation(Column.class);
+        return column == null || column.updatable();
+    }
+
+    String sqlType(Field field) {
+        Class<?> target = field.getType();
+        if (target.isEnum()) {
+            Enumerated enumerated = field.getAnnotation(Enumerated.class);
+            return enumerated != null && enumerated.value() == EnumType.ORDINAL ? "INTEGER" : "TEXT";
+        }
         if (target == int.class || target == Integer.class
             || target == long.class || target == Long.class
             || target == boolean.class || target == Boolean.class) return "INTEGER";
         if (target == double.class || target == Double.class
             || target == float.class || target == Float.class) return "REAL";
-        return "TEXT";
+        return "TEXT"; // String, UUID, Instant, LocalDate/LocalDateTime, enum(STRING)
     }
 
+    /** Converts a field value into a JDBC-storable form (enum/UUID/temporal -> String or ordinal). */
+    Object toDb(Field field, Object value) {
+        if (value == null) return null;
+        if (value instanceof Enum<?> constant) {
+            Enumerated enumerated = field.getAnnotation(Enumerated.class);
+            return enumerated != null && enumerated.value() == EnumType.ORDINAL
+                ? constant.ordinal() : constant.name();
+        }
+        if (value instanceof UUID || value instanceof Instant
+            || value instanceof LocalDate || value instanceof LocalDateTime) {
+            return value.toString();
+        }
+        return value;
+    }
+
+    /** Converts a raw id argument (from the caller) into its stored form. */
+    Object toDbId(Object id) {
+        return idField == null ? id : toDb(idField, id);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
     static Object coerce(Object value, Class<?> target) {
         if (value == null) return null;
         if (target.isInstance(value)) return value;
+        if (target.isEnum()) {
+            if (value instanceof Number number) return target.getEnumConstants()[number.intValue()];
+            return Enum.valueOf((Class<? extends Enum>) target, value.toString().trim());
+        }
+        if (target == UUID.class) return UUID.fromString(value.toString().trim());
+        if (target == Instant.class) return Instant.parse(value.toString().trim());
+        if (target == LocalDate.class) return LocalDate.parse(value.toString().trim());
+        if (target == LocalDateTime.class) return LocalDateTime.parse(value.toString().trim());
         if (value instanceof Number number) {
             if (target == int.class || target == Integer.class) return number.intValue();
             if (target == long.class || target == Long.class) return number.longValue();

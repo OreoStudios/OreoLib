@@ -1,7 +1,10 @@
 package com.oreo.lib;
 
 import com.oreo.lib.db.Column;
+import com.oreo.lib.db.CrudRepository;
 import com.oreo.lib.db.Db;
+import com.oreo.lib.db.EnumType;
+import com.oreo.lib.db.Enumerated;
 import com.oreo.lib.db.Id;
 import com.oreo.lib.db.Modifying;
 import com.oreo.lib.db.Param;
@@ -17,8 +20,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -138,6 +143,70 @@ class OreoLibTest {
             PlayerRow alex = dao.topScorers(0).stream()
                 .filter(p -> p.name.equals("Alex")).findFirst().orElseThrow();
             assertEquals(150, alex.score);
+        }
+    }
+
+    enum Role { ADMIN, OFFICER, GUEST }
+
+    @Table(name = "officers")
+    static class Officer {
+        @Id UUID id;
+        @Column(name = "email", nullable = false, unique = true) String email;
+        @Enumerated(EnumType.STRING) @Column(name = "role", nullable = false) Role role;
+        @Column(name = "created_at", nullable = false) Instant createdAt;
+        Officer() {}
+        Officer(UUID id, String email, Role role, Instant createdAt) {
+            this.id = id; this.email = email; this.role = role; this.createdAt = createdAt;
+        }
+    }
+
+    interface OfficerRepo extends CrudRepository<Officer, UUID> {
+        @Query("SELECT * FROM officers WHERE role = :role")
+        List<Officer> byRole(@Param("role") String role);
+    }
+
+    @Test
+    void crudRepositoryInterfaceGivesCrudPlusCustomQueries() {
+        try (Db db = Db.sqliteMemory()) {
+            OfficerRepo officers = Repositories.create(OfficerRepo.class, db);
+            officers.createTable();
+
+            UUID id = UUID.randomUUID();
+            officers.save(new Officer(id, "a@kaiju.io", Role.ADMIN, Instant.parse("2026-01-01T00:00:00Z")));
+            officers.save(new Officer(UUID.randomUUID(), "b@kaiju.io", Role.GUEST, Instant.parse("2026-01-02T00:00:00Z")));
+
+            assertEquals(2, officers.count());                 // inherited CRUD
+            assertTrue(officers.existsById(id));
+            assertEquals("a@kaiju.io", officers.findById(id).orElseThrow().email);
+            assertEquals(2, officers.findAll().size());
+            assertEquals(1, officers.byRole("ADMIN").size());  // custom @Query
+
+            officers.deleteById(id);
+            assertEquals(1, officers.count());
+        }
+    }
+
+    @Test
+    void repositoryHandlesUuidEnumAndInstant() {
+        try (Db db = Db.sqliteMemory()) {
+            Repository<Officer> officers = db.repository(Officer.class).createTable();
+
+            UUID id = UUID.randomUUID();
+            Instant now = Instant.parse("2026-10-06T10:15:30Z");
+            officers.save(new Officer(id, "chief@kaiju.io", Role.ADMIN, now)); // app-assigned UUID -> INSERT
+            assertEquals(1, officers.count());
+            assertTrue(officers.existsById(id));
+
+            Officer found = officers.findById(id).orElseThrow();
+            assertEquals(id, found.id);                 // UUID round-trip
+            assertEquals("chief@kaiju.io", found.email);
+            assertEquals(Role.ADMIN, found.role);       // enum round-trip
+            assertEquals(now, found.createdAt);         // Instant round-trip
+
+            found.role = Role.GUEST;
+            officers.save(found);                        // row exists -> UPDATE
+            assertEquals(1, officers.count());           // no duplicate
+            assertEquals(Role.GUEST, officers.findById(id).orElseThrow().role);
         }
     }
 

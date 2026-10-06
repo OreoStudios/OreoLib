@@ -43,8 +43,13 @@ public final class Repository<T> {
         for (int i = 0; i < info.fields.size(); i++) {
             Field field = info.fields.get(i);
             if (i > 0) sql.append(", ");
-            sql.append(info.columns.get(i)).append(' ').append(info.sqlType(field.getType()));
-            if (field == info.idField) sql.append(" PRIMARY KEY");
+            sql.append(info.columns.get(i)).append(' ').append(info.sqlType(field));
+            if (field == info.idField) {
+                sql.append(" PRIMARY KEY");
+            } else {
+                if (!info.nullable(field)) sql.append(" NOT NULL");
+                if (info.unique(field)) sql.append(" UNIQUE");
+            }
         }
         sql.append(')');
         db.run(sql.toString());
@@ -60,7 +65,13 @@ public final class Repository<T> {
     public Optional<T> findById(Object id) {
         requireId();
         return db.sql("SELECT * FROM " + info.table + " WHERE " + info.idColumn + " = ?")
-            .param(id).queryFirst().map(this::toEntity);
+            .param(info.toDbId(id)).queryFirst().map(this::toEntity);
+    }
+
+    public boolean existsById(Object id) {
+        requireId();
+        return db.sql("SELECT 1 FROM " + info.table + " WHERE " + info.idColumn + " = ? LIMIT 1")
+            .param(info.toDbId(id)).queryFirst().isPresent();
     }
 
     public long count() {
@@ -68,9 +79,19 @@ public final class Repository<T> {
             .map(row -> row.getLong("c")).orElse(0L);
     }
 
-    /** INSERT when the @Id is empty (writing the generated key back), otherwise UPDATE. */
+    /**
+     * For a generated id: INSERT when empty (key written back), else UPDATE.
+     * For an app-assigned id (e.g. UUID): INSERT if the row is new, else UPDATE.
+     */
     public T save(T entity) {
-        return info.idIsEmpty(entity) ? insert(entity) : update(entity);
+        if (info.idField == null) return insert(entity);
+        if (info.idGenerated) return info.idIsEmpty(entity) ? insert(entity) : update(entity);
+        Object id = info.get(info.idField, entity);
+        if (id == null) {
+            throw new OreoException("App-assigned @Id on " + info.type.getName()
+                + " must be set before save (add @GeneratedValue for DB-generated ids)");
+        }
+        return existsById(id) ? update(entity) : insert(entity);
     }
 
     public void delete(T entity) {
@@ -80,23 +101,24 @@ public final class Repository<T> {
 
     public void deleteById(Object id) {
         requireId();
-        db.run("DELETE FROM " + info.table + " WHERE " + info.idColumn + " = ?", id);
+        db.run("DELETE FROM " + info.table + " WHERE " + info.idColumn + " = ?", info.toDbId(id));
     }
 
     private T insert(T entity) {
+        boolean generatedEmpty = info.idField != null && info.idGenerated && info.idIsEmpty(entity);
         List<String> cols = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         for (int i = 0; i < info.fields.size(); i++) {
             Field field = info.fields.get(i);
-            if (field == info.idField && info.idIsEmpty(entity)) continue; // let the DB generate it
+            if (field == info.idField && generatedEmpty) continue; // let the DB generate it
             cols.add(info.columns.get(i));
-            values.add(info.get(field, entity));
+            values.add(info.toDb(field, info.get(field, entity)));
         }
         String placeholders = String.join(", ", Collections.nCopies(cols.size(), "?"));
         String sql = "INSERT INTO " + info.table + " (" + String.join(", ", cols)
             + ") VALUES (" + placeholders + ")";
         long key = db.sql(sql).params(values.toArray()).insert();
-        if (info.idField != null && info.idIsEmpty(entity) && key >= 0) {
+        if (generatedEmpty && key >= 0) {
             info.set(info.idField, entity, key);
         }
         return entity;
@@ -108,11 +130,11 @@ public final class Repository<T> {
         List<Object> values = new ArrayList<>();
         for (int i = 0; i < info.fields.size(); i++) {
             Field field = info.fields.get(i);
-            if (field == info.idField) continue;
+            if (field == info.idField || !info.updatable(field)) continue;
             assignments.add(info.columns.get(i) + " = ?");
-            values.add(info.get(field, entity));
+            values.add(info.toDb(field, info.get(field, entity)));
         }
-        values.add(info.get(info.idField, entity));
+        values.add(info.toDb(info.idField, info.get(info.idField, entity)));
         String sql = "UPDATE " + info.table + " SET " + String.join(", ", assignments)
             + " WHERE " + info.idColumn + " = ?";
         db.sql(sql).params(values.toArray()).run();

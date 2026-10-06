@@ -24,10 +24,14 @@ final class RepositoryHandler implements InvocationHandler {
 
     private final Db db;
     private final Class<?> repositoryInterface;
+    private final Repository<Object> crud; // null unless the interface extends CrudRepository
 
+    @SuppressWarnings("unchecked")
     RepositoryHandler(Db db, Class<?> repositoryInterface) {
         this.db = db;
         this.repositoryInterface = repositoryInterface;
+        Class<?> entityType = findEntityType(repositoryInterface);
+        this.crud = entityType == null ? null : (Repository<Object>) new Repository<>(db, entityType);
     }
 
     @Override
@@ -46,6 +50,10 @@ final class RepositoryHandler implements InvocationHandler {
 
         Object[] args = rawArgs == null ? new Object[0] : rawArgs;
 
+        if (method.getDeclaringClass() == CrudRepository.class) {
+            return crudCall(method, args);
+        }
+
         Procedure procedure = method.getAnnotation(Procedure.class);
         if (procedure != null) {
             return callProcedure(method, procedure.value(), args);
@@ -60,6 +68,43 @@ final class RepositoryHandler implements InvocationHandler {
 
         List<Row> rows = db.sql(bound.sql).params(bound.params).query();
         return convert(method, rows);
+    }
+
+    private Object crudCall(Method method, Object[] args) {
+        if (crud == null) {
+            throw new OreoException(repositoryInterface.getName()
+                + " extends CrudRepository but its entity type could not be resolved");
+        }
+        return switch (method.getName()) {
+            case "createTable" -> { crud.createTable(); yield null; }
+            case "save" -> crud.save(args[0]);
+            case "findById" -> crud.findById(args[0]);
+            case "existsById" -> crud.existsById(args[0]);
+            case "findAll" -> crud.findAll();
+            case "count" -> crud.count();
+            case "deleteById" -> { crud.deleteById(args[0]); yield null; }
+            case "delete" -> { crud.delete(args[0]); yield null; }
+            default -> throw new OreoException("Unsupported CrudRepository method: " + method.getName());
+        };
+    }
+
+    private static Class<?> findEntityType(Class<?> iface) {
+        for (Type type : iface.getGenericInterfaces()) {
+            if (type instanceof ParameterizedType parameterized) {
+                if (parameterized.getRawType() == CrudRepository.class
+                    && parameterized.getActualTypeArguments()[0] instanceof Class<?> entity) {
+                    return entity;
+                }
+                if (parameterized.getRawType() instanceof Class<?> raw) {
+                    Class<?> found = findEntityType(raw);
+                    if (found != null) return found;
+                }
+            } else if (type instanceof Class<?> raw) {
+                Class<?> found = findEntityType(raw);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private String resolveSql(Method method) {
