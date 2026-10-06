@@ -25,6 +25,26 @@
     </properties>
 
     <dependencies>
+        <!--
+            Optional, framework-coupled extras. They live in the single oreolib
+            artifact, but are declared optional so plain (non-game, non-DB) users
+            are NOT forced to download them transitively. A consumer that uses the
+            com.oreo.lib.db or com.oreo.lib.gdx helpers re-declares the matching
+            dependency in their own build (BlockCraft2D already ships libGDX).
+        -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.47.1.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.badlogicgames.gdx</groupId>
+            <artifactId>gdx</artifactId>
+            <version>1.14.2</version>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

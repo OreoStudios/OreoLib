@@ -1,5 +1,7 @@
 package com.oreo.lib;
 
+import com.oreo.lib.db.Db;
+import com.oreo.lib.db.Row;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -55,6 +57,35 @@ class OreoLibTest {
         assertEquals("ccc", from(words).maxBy(java.util.Comparator.comparingInt(String::length), ""));
         assertEquals("ccc", from(words).reversed().firstOr(""));
         assertEquals("ccc", from(words).lastOr(""));
+    }
+
+    @Test
+    void ormStoresQueriesAndMapsToRecords() {
+        record Score(String name, int points) {}
+
+        try (Db db = Db.sqliteMemory()) {
+            db.run("CREATE TABLE score(name TEXT, points INT)");
+
+            long affected = db.sql("INSERT INTO score(name, points) VALUES(?, ?)")
+                .params("Alex", 100).run();
+            db.sql("INSERT INTO score(name, points) VALUES(?, ?)").params("Steve", 250).run();
+            assertEquals(1, affected);
+
+            List<Row> rows = db.query("SELECT name, points FROM score WHERE points >= ?", 150);
+            assertEquals(1, rows.size());
+            assertEquals("Steve", rows.get(0).getString("name"));
+            assertEquals(250, rows.get(0).getInt("points"));
+
+            List<Score> top = db.sql("SELECT name, points FROM score ORDER BY points DESC")
+                .mapTo(Score.class);
+            assertEquals(2, top.size());
+            assertEquals(new Score("Steve", 250), top.get(0));
+            assertEquals(new Score("Alex", 100), top.get(1));
+
+            int total = db.queryFirst("SELECT SUM(points) AS total FROM score")
+                .map(row -> row.getInt("total")).orElse(0);
+            assertEquals(350, total);
+        }
     }
 
     @Test
