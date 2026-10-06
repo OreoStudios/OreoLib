@@ -24,6 +24,7 @@
         <module>oreolib-db</module>
         <module>oreolib-gdx</module>
         <module>oreolib-ecs</module>
+        <module>oreolib-mongo</module>
     </modules>
 
     <properties>
@@ -33,6 +34,7 @@
         <junit.version>5.11.4</junit.version>
         <sqlite.version>3.47.1.0</sqlite.version>
         <gdx.version>1.14.2</gdx.version>
+        <mongodb.version>5.2.1</mongodb.version>
     </properties>
 
     <dependencyManagement>
@@ -51,6 +53,11 @@
                 <groupId>com.badlogicgames.gdx</groupId>
                 <artifactId>gdx</artifactId>
                 <version>${gdx.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${mongodb.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>

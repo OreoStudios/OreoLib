@@ -18,6 +18,7 @@ import static com.oreo.lib.Oreo.*;
 | `oreolib-db` | `com.oreo.lib.db` | Annotation-driven ORM over JDBC (`@Entity`/`@Query`/`CrudRepository`) | JDBC driver (SQLite optional, bundled) |
 | `oreolib-gdx` | `com.oreo.lib.gdx` | libGDX helpers: Prefs, Save, Assets, Scene2D UI | libGDX |
 | `oreolib-ecs` | `com.oreo.lib.ecs` | Zero-dependency entity-component-system | none (zero-dep) |
+| `oreolib-mongo` | `com.oreo.lib.mongo` | MongoDB document helpers (not SQL) | MongoDB sync driver |
 
 ## Requirements
 
@@ -85,19 +86,34 @@ Locally installed coordinates use group id `com.oreo` and the module artifact id
 
 ## Databases (oreolib-db)
 
-The ORM is built on plain JDBC, so it works with any JDBC database — you supply the driver:
+The ORM is built on plain JDBC, so it works with any JDBC database — you supply the driver. The
+dialect is detected from the URL, so `createTable()` and `@GeneratedValue` emit the correct
+auto-increment DDL per engine (SQLite `INTEGER PRIMARY KEY`, Postgres `SERIAL`/`BIGSERIAL`,
+MySQL/MariaDB `AUTO_INCREMENT`):
 
 ```java
-Db sqlite   = Db.sqlite("game.db");                                   // bundled convenience
-Db postgres = Db.connect("jdbc:postgresql://localhost/app", "u", "p");
-Db mysql    = Db.connect("jdbc:mysql://localhost/app", "u", "p");
-Db mariadb  = Db.connect("jdbc:mariadb://localhost/app", "u", "p");
+Db sqlite   = Db.sqlite("game.db");                          // bundled driver
+Db postgres = Db.postgres("localhost", 5432, "app", "u", "p");
+Db mysql    = Db.mysql("localhost", 3306, "app", "u", "p");
+Db mariadb  = Db.mariadb("localhost", 3306, "app", "u", "p");
+Db any      = Db.connect("jdbc:...", "u", "p");              // any JDBC driver
 ```
 
-`Db.sql(...)`, `Repository`, and the `@Query` interfaces run against all of them. Note:
-`createTable()` and `@GeneratedValue` auto-increment currently emit SQLite-flavoured DDL; on other
-engines create the schema yourself (or use application-assigned ids such as `UUID`). MongoDB is not
-supported — it is not a JDBC/SQL database and would require a separate module.
+Add the matching driver to your build (`org.postgresql:postgresql`, `com.mysql:mysql-connector-j`,
+`org.mariadb.jdbc:mariadb-java-client`). `Db.sql(...)`, `Repository`, and the `@Query` interfaces
+run against all of them.
+
+**MongoDB** lives in the separate `oreolib-mongo` module because it is a document store, not
+SQL/JDBC — it has its own `Map`-based API, not `@Entity`/`@Query`:
+
+```java
+try (Mongo mongo = Mongo.connect("mongodb://localhost:27017", "kaiju")) {
+    Documents officers = mongo.collection("officers");
+    officers.insert(Map.of("_id", id, "email", "a@x.io", "role", "ADMIN"));
+    Optional<Map<String, Object>> one = officers.findById(id);
+    List<Map<String, Object>> admins = officers.where("role", "ADMIN");
+}
+```
 
 ## English-style API
 
@@ -396,10 +412,11 @@ New `Flow` methods: `sumInt`, `sumDouble`, `countWhere`, `join`, `maxBy`, `minBy
 - **Modular build** — four independent artifacts; depend only on what you need.
 - **`oreolib-db`** — annotation-driven ORM: `@Entity`/`@Table`/`@Id`/`@Column`/`@GeneratedValue`/
   `@Enumerated`/`@Transient`, a `Repository<T>` with auto CRUD, `CrudRepository<T,ID>` you extend,
-  and `@Query`/`@NativeQuery`/`@Modifying`/`@Param`/`@Procedure` repository interfaces. Works with
-  any JDBC driver; UUID/enum/Instant mapping included.
+  and `@Query`/`@NativeQuery`/`@Modifying`/`@Param`/`@Procedure` repository interfaces. UUID/enum/
+  Instant mapping included. Works with SQLite, PostgreSQL, MySQL and MariaDB — dialect-aware DDL.
 - **`oreolib-gdx`** — `Prefs`, `Save`, `Assets`, and Scene2D `Ui` builders.
 - **`oreolib-ecs`** — `Entity`, `Engine`, `EntitySystem`.
+- **`oreolib-mongo`** — MongoDB document helpers (`Mongo`, `Documents`) on the official driver.
 
 ## Design goal
 

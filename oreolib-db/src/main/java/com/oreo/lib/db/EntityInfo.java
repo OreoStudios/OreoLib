@@ -129,18 +129,14 @@ final class EntityInfo<T> {
         return column == null || column.updatable();
     }
 
-    String sqlType(Field field) {
+    String sqlType(Field field, Dialect dialect) {
         Class<?> target = field.getType();
         if (target.isEnum()) {
             Enumerated enumerated = field.getAnnotation(Enumerated.class);
-            return enumerated != null && enumerated.value() == EnumType.ORDINAL ? "INTEGER" : "TEXT";
+            boolean ordinal = enumerated != null && enumerated.value() == EnumType.ORDINAL;
+            return dialect.type(ordinal ? int.class : String.class);
         }
-        if (target == int.class || target == Integer.class
-            || target == long.class || target == Long.class
-            || target == boolean.class || target == Boolean.class) return "INTEGER";
-        if (target == double.class || target == Double.class
-            || target == float.class || target == Float.class) return "REAL";
-        return "TEXT"; // String, UUID, Instant, LocalDate/LocalDateTime, enum(STRING)
+        return dialect.type(target); // numbers direct; String/UUID/Instant/temporal -> text type
     }
 
     /** Converts a field value into a JDBC-storable form (enum/UUID/temporal -> String or ordinal). */

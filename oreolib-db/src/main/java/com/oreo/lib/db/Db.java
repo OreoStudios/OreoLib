@@ -26,9 +26,11 @@ import java.util.Optional;
  */
 public final class Db implements AutoCloseable {
     private final Connection connection;
+    private final Dialect dialect;
 
-    private Db(Connection connection) {
+    private Db(Connection connection, Dialect dialect) {
         this.connection = connection;
+        this.dialect = dialect;
     }
 
     /** Opens a SQLite database file (created if missing). Requires the sqlite-jdbc driver. */
@@ -41,9 +43,24 @@ public final class Db implements AutoCloseable {
         return connect("jdbc:sqlite::memory:");
     }
 
+    /** Connects to PostgreSQL (needs the org.postgresql:postgresql driver). */
+    public static Db postgres(String host, int port, String database, String user, String password) {
+        return connect("jdbc:postgresql://" + host + ":" + port + "/" + database, user, password);
+    }
+
+    /** Connects to MySQL (needs the com.mysql:mysql-connector-j driver). */
+    public static Db mysql(String host, int port, String database, String user, String password) {
+        return connect("jdbc:mysql://" + host + ":" + port + "/" + database, user, password);
+    }
+
+    /** Connects to MariaDB (needs the org.mariadb.jdbc:mariadb-java-client driver). */
+    public static Db mariadb(String host, int port, String database, String user, String password) {
+        return connect("jdbc:mariadb://" + host + ":" + port + "/" + database, user, password);
+    }
+
     public static Db connect(String url) {
         try {
-            return new Db(DriverManager.getConnection(url));
+            return new Db(DriverManager.getConnection(url), Dialect.fromUrl(url));
         } catch (SQLException e) {
             throw new OreoException("Could not connect to " + url + ": " + e.getMessage(), e);
         }
@@ -51,7 +68,7 @@ public final class Db implements AutoCloseable {
 
     public static Db connect(String url, String user, String password) {
         try {
-            return new Db(DriverManager.getConnection(url, user, password));
+            return new Db(DriverManager.getConnection(url, user, password), Dialect.fromUrl(url));
         } catch (SQLException e) {
             throw new OreoException("Could not connect to " + url + ": " + e.getMessage(), e);
         }
@@ -59,7 +76,19 @@ public final class Db implements AutoCloseable {
 
     /** Wraps an existing JDBC connection (OreoLib will not close it unless you call close()). */
     public static Db using(Connection connection) {
-        return new Db(connection);
+        return new Db(connection, detectDialect(connection));
+    }
+
+    private static Dialect detectDialect(Connection connection) {
+        try {
+            return Dialect.fromUrl(connection.getMetaData().getURL());
+        } catch (SQLException e) {
+            return Dialect.GENERIC;
+        }
+    }
+
+    public Dialect dialect() {
+        return dialect;
     }
 
     /** Starts a fluent statement. */

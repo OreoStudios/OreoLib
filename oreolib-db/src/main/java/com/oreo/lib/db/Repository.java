@@ -38,12 +38,18 @@ public final class Repository<T> {
 
     /** Creates the backing table if it does not exist (types inferred from the fields). */
     public Repository<T> createTable() {
+        Dialect dialect = db.dialect();
         StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ")
             .append(info.table).append(" (");
         for (int i = 0; i < info.fields.size(); i++) {
             Field field = info.fields.get(i);
             if (i > 0) sql.append(", ");
-            sql.append(info.columns.get(i)).append(' ').append(info.sqlType(field));
+            if (field == info.idField && info.idGenerated) {
+                // Dialect-specific auto-increment PK (SERIAL / AUTO_INCREMENT / INTEGER PRIMARY KEY).
+                sql.append(dialect.generatedIdColumn(info.columns.get(i), field.getType()));
+                continue;
+            }
+            sql.append(info.columns.get(i)).append(' ').append(info.sqlType(field, dialect));
             if (field == info.idField) {
                 sql.append(" PRIMARY KEY");
             } else {
