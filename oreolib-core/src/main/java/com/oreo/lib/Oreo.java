@@ -1,7 +1,5 @@
 package com.oreo.lib;
 
-import com.oreo.lib.db.Db;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -206,14 +204,6 @@ public final class Oreo {
     public static Every every(long amount) { return new Every(amount); }
 
     public static Setting setting(String key) { return new Setting(key); }
-
-    /** Opens a SQLite database file (needs the sqlite-jdbc driver on the classpath). */
-    public static Db sqlite(String path) { return Db.sqlite(path); }
-    /** Connects to any JDBC database (you supply the driver). */
-    public static Db db(String jdbcUrl) { return Db.connect(jdbcUrl); }
-    public static Db db(String jdbcUrl, String user, String password) {
-        return Db.connect(jdbcUrl, user, password);
-    }
 
     public static <K, V> OreoCache<K, V> cache() { return new OreoCache<>(); }
 

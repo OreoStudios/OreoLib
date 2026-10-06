@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.oreo</groupId>
+        <artifactId>oreolib-parent</artifactId>
+        <version>2.0.0</version>
+    </parent>
+
+    <artifactId>oreolib-db</artifactId>
+    <name>OreoLib DB</name>
+    <description>Annotation-driven data-mapper ORM over JDBC (Db, Repository, @Entity/@Query). SQLite driver optional.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.oreo</groupId>
+            <artifactId>oreolib-core</artifactId>
+        </dependency>
+        <!--
+            Optional: SQLite convenience driver. Generic JDBC works with any driver
+            you supply. Being optional (not transitive) keeps it off downstream
+            classpaths, but it is still available to this module's own tests.
+        -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

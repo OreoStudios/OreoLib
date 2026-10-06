@@ -2,11 +2,22 @@
 
 [![JitPack](https://jitpack.io/v/el211/OreoLib.svg)](https://jitpack.io/#el211/OreoLib)
 
-OreoLib is a lightweight, dependency-free Java 17 utility library designed to make code read closer to plain English.
+OreoLib is a modular Java 17 utility library designed to make code read closer to plain English.
+As of 2.0.0 it is split into small modules so you depend only on what you need — the core stays
+zero-dependency.
 
 ```java
 import static com.oreo.lib.Oreo.*;
 ```
+
+## Modules
+
+| Module | Package | Purpose | Extra dependency |
+| --- | --- | --- | --- |
+| `oreolib-core` | `com.oreo.lib` | Fluent utilities: when/match, Flow, clamp, files, async, cache, cooldown | none (zero-dep) |
+| `oreolib-db` | `com.oreo.lib.db` | Annotation-driven ORM over JDBC (`@Entity`/`@Query`/`CrudRepository`) | JDBC driver (SQLite optional, bundled) |
+| `oreolib-gdx` | `com.oreo.lib.gdx` | libGDX helpers: Prefs, Save, Assets, Scene2D UI | libGDX |
+| `oreolib-ecs` | `com.oreo.lib.ecs` | Zero-dependency entity-component-system | none (zero-dep) |
 
 ## Requirements
 
@@ -15,9 +26,10 @@ import static com.oreo.lib.Oreo.*;
 
 ## Installation
 
-### Maven with JitPack
+Add the JitPack repository, then pick the modules you need. On JitPack the group id is
+`com.github.el211.OreoLib` and the artifact id is the module name.
 
-Add the JitPack repository and OreoLib dependency:
+### Maven with JitPack
 
 ```xml
 <repositories>
@@ -28,10 +40,18 @@ Add the JitPack repository and OreoLib dependency:
 </repositories>
 
 <dependencies>
+    <!-- Core utilities (zero-dependency) -->
     <dependency>
-        <groupId>com.github.el211</groupId>
-        <artifactId>OreoLib</artifactId>
-        <version>v1.3.0</version>
+        <groupId>com.github.el211.OreoLib</groupId>
+        <artifactId>oreolib-core</artifactId>
+        <version>v2.0.0</version>
+    </dependency>
+
+    <!-- Optional: ORM. Add a JDBC driver yourself (e.g. sqlite-jdbc, postgresql, mysql-connector-j) -->
+    <dependency>
+        <groupId>com.github.el211.OreoLib</groupId>
+        <artifactId>oreolib-db</artifactId>
+        <version>v2.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -45,13 +65,14 @@ repositories {
 }
 
 dependencies {
-    implementation "com.github.el211:OreoLib:v1.3.0"
+    implementation "com.github.el211.OreoLib:oreolib-core:v2.0.0"
+    implementation "com.github.el211.OreoLib:oreolib-db:v2.0.0"   // optional
+    implementation "com.github.el211.OreoLib:oreolib-gdx:v2.0.0"  // optional
+    implementation "com.github.el211.OreoLib:oreolib-ecs:v2.0.0"  // optional
 }
 ```
 
-### Local installation
-
-You can also download `oreolib-1.3.0.jar` from the [GitHub releases](https://github.com/el211/OreoLib/releases), or clone and install the project locally:
+### Build from source
 
 ```bash
 git clone https://github.com/el211/OreoLib.git
@@ -59,15 +80,24 @@ cd OreoLib
 mvn clean install
 ```
 
-The locally installed Maven coordinates are:
+Locally installed coordinates use group id `com.oreo` and the module artifact ids
+(`oreolib-core`, `oreolib-db`, `oreolib-gdx`, `oreolib-ecs`) at version `2.0.0`.
 
-```xml
-<dependency>
-    <groupId>com.oreo</groupId>
-    <artifactId>oreolib</artifactId>
-    <version>1.3.0</version>
-</dependency>
+## Databases (oreolib-db)
+
+The ORM is built on plain JDBC, so it works with any JDBC database — you supply the driver:
+
+```java
+Db sqlite   = Db.sqlite("game.db");                                   // bundled convenience
+Db postgres = Db.connect("jdbc:postgresql://localhost/app", "u", "p");
+Db mysql    = Db.connect("jdbc:mysql://localhost/app", "u", "p");
+Db mariadb  = Db.connect("jdbc:mariadb://localhost/app", "u", "p");
 ```
+
+`Db.sql(...)`, `Repository`, and the `@Query` interfaces run against all of them. Note:
+`createTable()` and `@GeneratedValue` auto-increment currently emit SQLite-flavoured DDL; on other
+engines create the schema yourself (or use application-assigned ids such as `UUID`). MongoDB is not
+supported — it is not a JDBC/SQL database and would require a separate module.
 
 ## English-style API
 
@@ -328,7 +358,12 @@ if (teleport.use(player.getUniqueId())) {
 
 ## Backward compatibility
 
-OreoLib 1.3.0 keeps the original 1.0.x, 1.1.x, and 1.2.x helpers, including `out`, `text`, `list`, `range`, `chain`, `read`, `write`, `append`, `tryRun`, `tryGet`, `retry`, `repeat`, `sleep`, `async`, `where`, `map`, `each`, `match`, `safe`, validation, cache, and cooldown APIs.
+OreoLib 2.0.0 keeps every helper from the 1.x line; the only breaking change is packaging — the
+single `oreolib` artifact is now split into `oreolib-core`/`-db`/`-gdx`/`-ecs`. The `com.oreo.lib`
+APIs (`out`, `text`, `list`, `range`, `chain`, `read`, `write`, `append`, `tryRun`, `tryGet`,
+`retry`, `repeat`, `sleep`, `async`, `where`, `map`, `each`, `match`, `safe`, validation, cache,
+cooldown, plus 1.3's `clamp`/`lerp`/`loop`/`sumBy` and the `Flow` aggregates) are unchanged and live
+in `oreolib-core`.
 
 ## What's new in 1.3.0
 
@@ -356,19 +391,15 @@ String last = from(history).reversed().firstOr("none");
 
 New `Flow` methods: `sumInt`, `sumDouble`, `countWhere`, `join`, `maxBy`, `minBy`, `reversed`, `lastOr`, `toSet`.
 
-## Build from source
+## What's new in 2.0.0
 
-```bash
-mvn clean package
-```
-
-The build runs the test suite and creates:
-
-- `target/oreolib-1.2.0.jar`
-- `target/oreolib-1.2.0-sources.jar`
-- `target/OreoLib-1.2.0.zip`
-
-The release ZIP contains this README, the compiled library, and the source archive.
+- **Modular build** — four independent artifacts; depend only on what you need.
+- **`oreolib-db`** — annotation-driven ORM: `@Entity`/`@Table`/`@Id`/`@Column`/`@GeneratedValue`/
+  `@Enumerated`/`@Transient`, a `Repository<T>` with auto CRUD, `CrudRepository<T,ID>` you extend,
+  and `@Query`/`@NativeQuery`/`@Modifying`/`@Param`/`@Procedure` repository interfaces. Works with
+  any JDBC driver; UUID/enum/Instant mapping included.
+- **`oreolib-gdx`** — `Prefs`, `Save`, `Assets`, and Scene2D `Ui` builders.
+- **`oreolib-ecs`** — `Entity`, `Engine`, `EntitySystem`.
 
 ## Design goal
 

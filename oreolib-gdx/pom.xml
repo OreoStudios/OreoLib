@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.oreo</groupId>
+        <artifactId>oreolib-parent</artifactId>
+        <version>2.0.0</version>
+    </parent>
+
+    <artifactId>oreolib-gdx</artifactId>
+    <name>OreoLib GDX</name>
+    <description>Readable libGDX helpers: Prefs, Save, Assets, Scene2D UI builders.</description>
+
+    <dependencies>
+        <!--
+            Optional: libGDX. Declared optional so it is not forced on consumers
+            transitively; a game using these helpers already depends on libGDX.
+        -->
+        <dependency>
+            <groupId>com.badlogicgames.gdx</groupId>
+            <artifactId>gdx</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>
