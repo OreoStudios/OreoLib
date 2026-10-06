@@ -82,6 +82,15 @@ final class EntityInfo<T> {
         }
     }
 
+    /** Builds an entity from a result row by column name. */
+    T map(Row row) {
+        T entity = instantiate();
+        for (int i = 0; i < fields.size(); i++) {
+            set(fields.get(i), entity, row.get(columns.get(i)));
+        }
+        return entity;
+    }
+
     boolean idIsEmpty(T entity) {
         if (idField == null) return false;
         Object value = get(idField, entity);

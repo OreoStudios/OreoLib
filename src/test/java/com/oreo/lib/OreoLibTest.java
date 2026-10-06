@@ -3,6 +3,10 @@ package com.oreo.lib;
 import com.oreo.lib.db.Column;
 import com.oreo.lib.db.Db;
 import com.oreo.lib.db.Id;
+import com.oreo.lib.db.Modifying;
+import com.oreo.lib.db.Param;
+import com.oreo.lib.db.Query;
+import com.oreo.lib.db.Repositories;
 import com.oreo.lib.db.Repository;
 import com.oreo.lib.db.Row;
 import com.oreo.lib.db.Table;
@@ -101,6 +105,40 @@ class OreoLibTest {
         int score;
         PlayerRow() {}
         PlayerRow(String name, int score) { this.name = name; this.score = score; }
+    }
+
+    interface PlayerDao {
+        @Query("SELECT * FROM players WHERE score >= :min ORDER BY score DESC")
+        List<PlayerRow> topScorers(@Param("min") int min);
+
+        @Query("SELECT COUNT(*) FROM players")
+        long total();
+
+        @Modifying
+        @Query("UPDATE players SET score = score + :bonus WHERE name = :name")
+        int award(@Param("name") String name, @Param("bonus") int bonus);
+    }
+
+    @Test
+    void repositoryInterfaceRunsQueryAnnotations() {
+        try (Db db = Db.sqliteMemory()) {
+            Repository<PlayerRow> players = db.repository(PlayerRow.class).createTable();
+            players.save(new PlayerRow("Alex", 100));
+            players.save(new PlayerRow("Steve", 250));
+            players.save(new PlayerRow("Max", 300));
+
+            PlayerDao dao = Repositories.create(PlayerDao.class, db);
+
+            List<PlayerRow> top = dao.topScorers(250);
+            assertEquals(2, top.size());
+            assertEquals("Max", top.get(0).name);        // ordered DESC
+            assertEquals(3L, dao.total());
+
+            assertEquals(1, dao.award("Alex", 50));       // @Modifying UPDATE
+            PlayerRow alex = dao.topScorers(0).stream()
+                .filter(p -> p.name.equals("Alex")).findFirst().orElseThrow();
+            assertEquals(150, alex.score);
+        }
     }
 
     @Test

@@ -63,8 +63,8 @@ public final class Db implements AutoCloseable {
     }
 
     /** Starts a fluent statement. */
-    public Query sql(String sql) {
-        return new Query(connection, sql);
+    public Sql sql(String sql) {
+        return new Sql(connection, sql);
     }
 
     /** A Spring-Data-style auto-CRUD repository for an annotated entity class. */

@@ -4,10 +4,36 @@ import com.oreo.lib.OreoException;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /** Maps a {@link Row} onto a Java record by matching component names to columns. */
 final class Rows {
     private Rows() {}
+
+    /** Reads an entire result set into rows keyed by lower-case column label. */
+    static List<Row> read(ResultSet resultSet) throws SQLException {
+        ResultSetMetaData meta = resultSet.getMetaData();
+        int columnCount = meta.getColumnCount();
+        String[] labels = new String[columnCount];
+        for (int i = 0; i < columnCount; i++) {
+            labels[i] = meta.getColumnLabel(i + 1).toLowerCase();
+        }
+        List<Row> rows = new ArrayList<>();
+        while (resultSet.next()) {
+            Map<String, Object> values = new LinkedHashMap<>();
+            for (int i = 0; i < columnCount; i++) {
+                values.put(labels[i], resultSet.getObject(i + 1));
+            }
+            rows.add(new Row(values));
+        }
+        return rows;
+    }
 
     static <T> T toRecord(Row row, Class<T> type) {
         if (!type.isRecord()) {

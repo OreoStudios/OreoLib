@@ -120,11 +120,7 @@ public final class Repository<T> {
     }
 
     private T toEntity(Row row) {
-        T entity = info.instantiate();
-        for (int i = 0; i < info.fields.size(); i++) {
-            info.set(info.fields.get(i), entity, row.get(info.columns.get(i)));
-        }
-        return entity;
+        return info.map(row);
     }
 
     private void requireId() {
