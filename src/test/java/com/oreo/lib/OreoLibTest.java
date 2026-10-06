@@ -1,7 +1,13 @@
 package com.oreo.lib;
 
+import com.oreo.lib.db.Column;
 import com.oreo.lib.db.Db;
+import com.oreo.lib.db.Id;
+import com.oreo.lib.db.Repository;
 import com.oreo.lib.db.Row;
+import com.oreo.lib.db.Table;
+import com.oreo.lib.ecs.Engine;
+import com.oreo.lib.ecs.Entity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -86,6 +92,67 @@ class OreoLibTest {
                 .map(row -> row.getInt("total")).orElse(0);
             assertEquals(350, total);
         }
+    }
+
+    @Table(name = "players")
+    static class PlayerRow {
+        @Id Long id;
+        @Column(name = "name") String name;
+        int score;
+        PlayerRow() {}
+        PlayerRow(String name, int score) { this.name = name; this.score = score; }
+    }
+
+    @Test
+    void repositoryDoesSpringStyleCrudFromAnnotations() {
+        try (Db db = Db.sqliteMemory()) {
+            Repository<PlayerRow> players = db.repository(PlayerRow.class).createTable();
+
+            PlayerRow saved = players.save(new PlayerRow("Alex", 100));
+            assertNotNull(saved.id);                 // generated key written back
+            assertTrue(saved.id > 0);
+            players.save(new PlayerRow("Steve", 250));
+            assertEquals(2, players.count());
+
+            PlayerRow found = players.findById(saved.id).orElseThrow();
+            assertEquals("Alex", found.name);
+            assertEquals(100, found.score);
+
+            found.score = 150;
+            players.save(found);                     // UPDATE (id is set)
+            assertEquals(150, players.findById(saved.id).orElseThrow().score);
+            assertEquals(2, players.count());        // still two rows, no duplicate
+
+            players.deleteById(saved.id);
+            assertEquals(1, players.count());
+        }
+    }
+
+    @Test
+    void ecsRunsSystemsOverMatchingEntities() {
+        class Pos { float x, y; Pos(float x, float y) { this.x = x; this.y = y; } }
+        class Vel { float dx, dy; Vel(float dx, float dy) { this.dx = dx; this.dy = dy; } }
+
+        Engine engine = new Engine();
+        engine.create().set(new Pos(0, 0)).set(new Vel(2, 1));
+        engine.create().set(new Pos(5, 5)); // no velocity -> must be skipped
+
+        engine.add((e, dt) -> {
+            for (Entity entity : e.entitiesWith(Pos.class, Vel.class)) {
+                Pos p = entity.get(Pos.class);
+                Vel v = entity.get(Vel.class);
+                p.x += v.dx * dt;
+                p.y += v.dy * dt;
+            }
+        });
+
+        engine.update(1f);
+
+        assertEquals(2, engine.size());
+        assertEquals(1, engine.entitiesWith(Vel.class).size());
+        Pos moved = engine.entitiesWith(Vel.class).get(0).get(Pos.class);
+        assertEquals(2f, moved.x);
+        assertEquals(1f, moved.y);
     }
 
     @Test

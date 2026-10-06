@@ -67,6 +67,11 @@ public final class Db implements AutoCloseable {
         return new Query(connection, sql);
     }
 
+    /** A Spring-Data-style auto-CRUD repository for an annotated entity class. */
+    public <T> Repository<T> repository(Class<T> entityType) {
+        return new Repository<>(this, entityType);
+    }
+
     public int run(String sql, Object... params) {
         return sql(sql).params(params).run();
     }
