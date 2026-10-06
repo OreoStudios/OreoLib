@@ -9,6 +9,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 
 public final class Lists {
     private Lists() {}
@@ -54,6 +55,18 @@ public final class Lists {
     public static <T> T firstWhere(Iterable<T> source, Predicate<T> predicate, T fallback) {
         for (T item : source) if (predicate.test(item)) return item;
         return fallback;
+    }
+
+    public static <T> int sumBy(Iterable<T> source, ToIntFunction<? super T> property) {
+        int total = 0;
+        for (T item : source) total += property.applyAsInt(item);
+        return total;
+    }
+
+    public static <T> int countWhere(Iterable<T> source, Predicate<? super T> predicate) {
+        int total = 0;
+        for (T item : source) if (predicate.test(item)) total++;
+        return total;
     }
 
     public static <T> T chooseOne(Iterable<? extends T> source) {

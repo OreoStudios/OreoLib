@@ -9,8 +9,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
 
 /**
  * Main entry point for OreoLib.
@@ -123,6 +125,28 @@ public final class Oreo {
     public static void times(int times, Consumer<Integer> action) {
         Checks.require(times >= 0, "times must be >= 0");
         for (int i = 0; i < times; i++) action.accept(i);
+    }
+
+    /** Runs the action for each index 0..count-1 without boxing. */
+    public static void loop(int count, IntConsumer action) {
+        Checks.require(count >= 0, "count must be >= 0");
+        for (int i = 0; i < count; i++) action.accept(i);
+    }
+
+    public static int clamp(int value, int min, int max) { return Maths.clamp(value, min, max); }
+    public static long clamp(long value, long min, long max) { return Maths.clamp(value, min, max); }
+    public static float clamp(float value, float min, float max) { return Maths.clamp(value, min, max); }
+    public static double clamp(double value, double min, double max) { return Maths.clamp(value, min, max); }
+    public static float lerp(float from, float to, float t) { return Maths.lerp(from, to, t); }
+    public static double lerp(double from, double to, double t) { return Maths.lerp(from, to, t); }
+    public static float fraction(float value, float min, float max) { return Maths.fraction(value, min, max); }
+
+    public static <T> int sumBy(Iterable<T> source, ToIntFunction<? super T> property) {
+        return Lists.sumBy(source, property);
+    }
+
+    public static <T> int countWhere(Iterable<T> source, Predicate<? super T> predicate) {
+        return Lists.countWhere(source, predicate);
     }
 
     public static <T> Chain<T> chain(T value) { return Chain.of(value); }
