@@ -19,6 +19,19 @@
         <tag>HEAD</tag>
     </scm>
 
+    <distributionManagement>
+        <repository>
+            <id>oreostudios-libs</id>
+            <name>OreoStudios Releases</name>
+            <url>https://maven.oreostudios.fr/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>oreostudios-libs</id>
+            <name>OreoStudios Snapshots</name>
+            <url>https://maven.oreostudios.fr/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <modules>
         <module>oreolib-core</module>
         <module>oreolib-db</module>
