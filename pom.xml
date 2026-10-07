@@ -22,13 +22,13 @@
     <distributionManagement>
         <repository>
             <id>oreostudios-libs</id>
-            <name>OreoStudios Releases</name>
-            <url>https://maven.oreostudios.fr/releases</url>
+            <name>OreoStudios Libraries</name>
+            <url>https://maven.oreostudios.fr/oreostudioslib</url>
         </repository>
         <snapshotRepository>
             <id>oreostudios-libs</id>
-            <name>OreoStudios Snapshots</name>
-            <url>https://maven.oreostudios.fr/snapshots</url>
+            <name>OreoStudios Libraries</name>
+            <url>https://maven.oreostudios.fr/oreostudioslib</url>
         </snapshotRepository>
     </distributionManagement>
 
