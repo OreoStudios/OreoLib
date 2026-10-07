@@ -10,12 +10,12 @@
     <packaging>pom</packaging>
     <name>OreoLib Parent</name>
     <description>Modular fluent Java utility library. Depend only on the modules you need.</description>
-    <url>https://github.com/el211/OreoLib</url>
+    <url>https://github.com/OreoStudios/OreoLib</url>
 
     <scm>
-        <connection>scm:git:https://github.com/el211/OreoLib.git</connection>
-        <developerConnection>scm:git:https://github.com/el211/OreoLib.git</developerConnection>
-        <url>https://github.com/el211/OreoLib</url>
+        <connection>scm:git:https://github.com/OreoStudios/OreoLib.git</connection>
+        <developerConnection>scm:git:https://github.com/OreoStudios/OreoLib.git</developerConnection>
+        <url>https://github.com/OreoStudios/OreoLib</url>
         <tag>HEAD</tag>
     </scm>
 

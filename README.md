@@ -1,6 +1,6 @@
 # OreoLib
 
-[![JitPack](https://jitpack.io/v/el211/OreoLib.svg)](https://jitpack.io/#el211/OreoLib)
+[![JitPack](https://jitpack.io/v/OreoStudios/OreoLib.svg)](https://jitpack.io/#OreoStudios/OreoLib)
 
 OreoLib is a modular Java 17 utility library designed to make code read closer to plain English.
 As of 2.0.0 it is split into small modules so you depend only on what you need — the core stays
@@ -28,7 +28,7 @@ import static com.oreo.lib.Oreo.*;
 ## Installation
 
 Add the JitPack repository, then pick the modules you need. On JitPack the group id is
-`com.github.el211.OreoLib` and the artifact id is the module name.
+`com.github.OreoStudios.OreoLib` and the artifact id is the module name.
 
 ### Maven with JitPack
 
@@ -43,14 +43,14 @@ Add the JitPack repository, then pick the modules you need. On JitPack the group
 <dependencies>
     <!-- Core utilities (zero-dependency) -->
     <dependency>
-        <groupId>com.github.el211.OreoLib</groupId>
+        <groupId>com.github.OreoStudios.OreoLib</groupId>
         <artifactId>oreolib-core</artifactId>
         <version>v2.0.0</version>
     </dependency>
 
     <!-- Optional: ORM. Add a JDBC driver yourself (e.g. sqlite-jdbc, postgresql, mysql-connector-j) -->
     <dependency>
-        <groupId>com.github.el211.OreoLib</groupId>
+        <groupId>com.github.OreoStudios.OreoLib</groupId>
         <artifactId>oreolib-db</artifactId>
         <version>v2.0.0</version>
     </dependency>
@@ -66,17 +66,17 @@ repositories {
 }
 
 dependencies {
-    implementation "com.github.el211.OreoLib:oreolib-core:v2.0.0"
-    implementation "com.github.el211.OreoLib:oreolib-db:v2.0.0"   // optional
-    implementation "com.github.el211.OreoLib:oreolib-gdx:v2.0.0"  // optional
-    implementation "com.github.el211.OreoLib:oreolib-ecs:v2.0.0"  // optional
+    implementation "com.github.OreoStudios.OreoLib:oreolib-core:v2.0.0"
+    implementation "com.github.OreoStudios.OreoLib:oreolib-db:v2.0.0"   // optional
+    implementation "com.github.OreoStudios.OreoLib:oreolib-gdx:v2.0.0"  // optional
+    implementation "com.github.OreoStudios.OreoLib:oreolib-ecs:v2.0.0"  // optional
 }
 ```
 
 ### Build from source
 
 ```bash
-git clone https://github.com/el211/OreoLib.git
+git clone https://github.com/OreoStudios/OreoLib.git
 cd OreoLib
 mvn clean install
 ```
