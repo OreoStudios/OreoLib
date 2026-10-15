@@ -56,6 +56,18 @@ class OreoTestTest {
     }
 
     @Test
+    void emptyStringFailureIsSavedAndReplayed() throws IOException {
+        Path fixtures = temporary.resolve("empty-string-fixtures");
+        TestReport first = OreoTest.classes(EmptyStringFailure.class)
+                .withFuzzing(1).withRegressionTests(fixtures).run();
+        assertEquals(1, first.failed());
+        TestReport replay = OreoTest.classes(EmptyStringFailure.class)
+                .withFuzzing(1).withRegressionTests(fixtures).run();
+        assertEquals(2, replay.failed());
+        assertEquals(-1, replay.failures().get(0).sample());
+    }
+
+    @Test
     void unsupportedInputsAndMissingConstructorsAreFailures() {
         TestReport unsupported = OreoTest.classes(Unsupported.class).run();
         assertEquals(1, unsupported.failed());
@@ -117,6 +129,12 @@ class OreoTestTest {
     @AutoTest
     public static class ThrowsUnexpectedly {
         public int calculate() { throw new IllegalStateException("broken"); }
+    }
+
+    @AutoTest
+    public static class EmptyStringFailure {
+        @NotNullResult
+        public String process(String input) { return null; }
     }
 
     public static class NotAnnotated {
