@@ -8,6 +8,22 @@ import java.util.Random;
 final class ArgumentGenerator {
     private ArgumentGenerator() {}
 
+    /** Non-destructive, deterministic text stress corpus. Requires @AdversarialInput. */
+    private static final String[] ADVERSARIAL = {
+            "",
+            " ",
+            "\t\n",
+            String.valueOf((char) 0),
+            "café",
+            "🚀",
+            String.valueOf((char) 0x202E) + "XYZ",
+            "../etc/passwd",
+            "<script>alert(1)</script>",
+            "\' OR \'1\'=\'1",
+            "{\"nested\":[null,true]}",
+            "x".repeat(4096)
+    };
+
     static Object[] generate(Method method, int sample, Random random) {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
@@ -15,6 +31,23 @@ final class ArgumentGenerator {
             Parameter p = parameters[i];
             Class<?> type = p.getType();
             TestRange range = p.getAnnotation(TestRange.class);
+            boolean nullable = p.isAnnotationPresent(NullableInput.class);
+            boolean hostile = p.isAnnotationPresent(AdversarialInput.class);
+            if (nullable && type.isPrimitive()) {
+                throw new IllegalArgumentException("@NullableInput requires a reference type: " + p);
+            }
+            if (hostile && type != String.class) {
+                throw new IllegalArgumentException("@AdversarialInput requires String: " + p);
+            }
+            if (nullable && sample == 0) {
+                args[i] = null;
+                continue;
+            }
+            int caseSample = nullable ? sample - 1 : sample;
+            if (hostile && caseSample < ADVERSARIAL.length) {
+                args[i] = ADVERSARIAL[caseSample];
+                continue;
+            }
             if (range != null && !numeric(type)) {
                 throw new IllegalArgumentException("@TestRange requires a numeric parameter: " + p);
             }

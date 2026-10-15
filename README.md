@@ -517,11 +517,122 @@ Copy those files into a version-controlled fixture directory and pass its path t
 `withRegressionTests(Path)` to retain them across clean CI builds. Same seed,
 method signatures, Java versions and fixtures produce reproducible generated cases.
 
+### Oreo Prism — relational testing without fixed expected values
+
+Oreo Prism builds on AutoTest's deterministic input generation and regression
+replay. It runs **developer-declared behavioral relations** and automatically
+searches for smaller inputs that reproduce the same class of failure. These
+features are optional and have no additional runtime dependencies.
+
+**Metamorphic relations** check the same function under multiple views:
+
+```java
+import com.oreo.lib.autotest.*;
+
+public final class PriceMath {
+    @AutoTest(samples = 1000)
+    @Metamorphic(MetamorphicRule.COMMUTATIVE)
+    public int add(int left, int right) {
+        return left + right; // add(a, b) == add(b, a)
+    }
+
+    @AutoTest
+    @Metamorphic(MetamorphicRule.IDEMPOTENT)
+    public String normalize(String text) {
+        return text.trim(); // normalize(normalize(s)) == normalize(s)
+    }
+
+    @AutoTest
+    @Metamorphic(MetamorphicRule.DETERMINISTIC)
+    public String format(int number) {
+        return String.valueOf(number); // same inputs => same result
+    }
+}
+```
+
+**Differential / twin tests** compare a new implementation against a known
+reference for identical generated arguments:
+
+```java
+class NewParser {
+    @AutoTest
+    @CompareWith(value = "parse", in = OldParser.class)
+    public int parse(String raw) { return Integer.parseInt(raw.trim()); }
+}
+class OldParser {
+    public int parse(String raw) { return Integer.parseInt(raw.trim()); }
+}
+```
+
+**Round-trip tests** check `decode(encode(x)) == x` without storing expected
+outputs:
+
+```java
+class Codec {
+    @AutoTest
+    @RoundTrip("decode")
+    public String encode(String text) { return "v:" + text; }
+
+    private String decode(String encoded) { return encoded.substring(2); }
+}
+```
+
+**Adversarial inputs** are explicitly enabled per parameter. The corpus
+includes empty strings, whitespace/controls, combining Unicode, emoji, BiDi
+text, path traversal-like and injection-like strings, and a long string.
+`@NullableInput` separately tests a reference argument with `null`.
+
+```java
+@AutoTest
+@NotNullResult
+public String sanitize(@AdversarialInput @NullableInput String text) {
+    return text == null ? "" : text.strip();
+}
+```
+
+**Automatic counterexample minimization** (enabled by default) runs bounded
+additional probes, keeps only changes that reproduce the *same kind* of
+failure, and saves the minimized case if regression storage is configured:
+
+```java
+TestReport report = OreoTest.classes(PriceMath.class)
+    .withFuzzing(1000)
+    .withSeed(123)
+    .withShrinking(128) // max additional attempts per failing case; 0 disables
+    .withRegressionTests(Path.of("src/test/oreolib-regressions"))
+    .run();
+report.writeHtml(Path.of("target/prism-report.html"));
+report.assertSuccess();
+```
+
+For integration via Maven, the normal AutoTest `exec-maven-plugin` configuration
+above also runs the Prism checks. PR builds run `mvn verify` in GitHub Actions.
+
+**Important conditions and limitations**:
+
+- These relations must be **true for the functions you annotate**.
+  Commutative operations need exactly two identically typed parameters and
+  matching declared ranges. Idempotence requires a unary `T -> T` function.
+- Comparison is based on Java result equality, including array deep equality;
+  complex objects should implement meaningful `equals()`. This is not a
+  full semantic equivalence proof.
+- A successful run does not prove correctness or security. The engine does not
+  synthesize a domain-specific oracle, coverage-guided instrumentation, or
+  mutations of the application bytecode.
+- Use isolated, side-effect-free methods. Shrinking, metamorphic and differential
+  verification really re-execute code. Not suitable for production transactions,
+  remote APIs or destructive operations without a controlled test environment.
+- Shrinking is bounded and heuristic: it seeks a **smaller reproducer**,
+  not a mathematically minimal input. The saved fixtures are method-signature
+  keyed and should be version-controlled to survive clean builds.
+- Adversarial input payloads are **test data**, not vulnerability exploits or
+  a guarantee of discovering a security issue.
+
 ### What AutoTest can and cannot prove
 
 - Tests include inclusive numeric boundaries, zero, generated values and enum options.
-  String inputs include empty and basic ASCII values. No null inputs are generated
-  unless replaying an existing fixture that contains null.
+  String inputs include empty and basic ASCII values, with an optional adversarial corpus.
+  Null inputs are opt-in through `@NullableInput` (or saved regression fixtures).
 - `@NotNullResult` and `@ResultRange` check returned values. Use `@ExpectThrows`
   only when every generated invocation should throw the specified exception.
 - Supported generated parameter types: Java primitives, their boxed counterparts,
