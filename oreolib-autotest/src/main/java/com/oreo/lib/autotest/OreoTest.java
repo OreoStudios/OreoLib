@@ -22,6 +22,7 @@ public final class OreoTest {
     private Integer sampleOverride;
     private long seed = 20261015L;
     private RegressionStore regressions;
+    private int shrinkBudget = 64;
 
     private OreoTest(List<Class<?>> classes) { this.classes = classes; }
 
@@ -53,6 +54,18 @@ public final class OreoTest {
     public OreoTest withRegressionTests(Path directory) {
         if (directory == null) throw new IllegalArgumentException("Regression directory is null");
         this.regressions = new RegressionStore(directory);
+        return this;
+    }
+
+    /**
+     * Bound the number of extra execution attempts spent minimizing each failure.
+     * A budget of zero disables shrinking; the default is 64.
+     */
+    public OreoTest withShrinking(int evaluations) {
+        if (evaluations < 0 || evaluations > 10_000) {
+            throw new IllegalArgumentException("shrink evaluations must be 0..10000");
+        }
+        this.shrinkBudget = evaluations;
         return this;
     }
 
@@ -116,10 +129,18 @@ public final class OreoTest {
             return;
         }
 
+        PrismChecks checks;
+        try {
+            checks = new PrismChecks(method, constructor);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            fail(report, method, -1, methodSeed, new Object[0], "Invalid Oreo Prism configuration: " + trace(e));
+            return;
+        }
+
         if (regressions != null) {
             try {
                 List<Object[]> saved = regressions.load(method);
-                for (int i = 0; i < saved.size(); i++) invoke(method, constructor, saved.get(i), -i - 1, methodSeed, report);
+                for (int i = 0; i < saved.size(); i++) invoke(method, checks, saved.get(i), -i - 1, methodSeed, report);
             } catch (Exception e) {
                 fail(report, method, -1, methodSeed, new Object[0], "Cannot read regression cases: " + trace(e));
             }
@@ -133,49 +154,31 @@ public final class OreoTest {
                 fail(report, method, sample, methodSeed, new Object[0], "Cannot generate inputs: " + trace(e));
                 break; // do not count the same configuration error many times
             }
-            invoke(method, constructor, args, sample, methodSeed, report);
+            invoke(method, checks, args, sample, methodSeed, report);
         }
     }
 
-    private void invoke(Method method, Constructor<?> ctor, Object[] args,
+    private void invoke(Method method, PrismChecks checks, Object[] args,
                         int sample, long methodSeed, TestReport report) {
-        Throwable thrown = null;
-        Object result = null;
-        try {
-            Object instance = ctor == null ? null : ctor.newInstance();
-            result = method.invoke(instance, args);
-        } catch (InvocationTargetException e) {
-            thrown = e.getCause();
-        } catch (Throwable e) {
-            thrown = e;
-        }
-        ExpectThrows expected = method.getAnnotation(ExpectThrows.class);
-        String error = null;
-        if (expected != null) {
-            if (thrown == null) error = "Expected exception " + expected.value().getName() + " but none was thrown";
-            else if (!expected.value().isInstance(thrown)) error = "Unexpected exception: " + trace(thrown);
-        } else if (thrown != null) {
-            error = "Unexpected exception: " + trace(thrown);
-        } else if (method.isAnnotationPresent(NotNullResult.class) && result == null) {
-            error = "@NotNullResult contract failed";
-        } else {
-            ResultRange range = method.getAnnotation(ResultRange.class);
-            if (range != null) {
-                if (!(result instanceof Number number) || !Double.isFinite(number.doubleValue())
-                        || number.doubleValue() < range.min() || number.doubleValue() > range.max()) {
-                    error = "@ResultRange contract failed: " + result + " not in " + range.min() + ".." + range.max();
-                }
-            }
-        }
-        if (error == null) {
+        PrismChecks.Violation violation = checks.check(args);
+        if (violation == null) {
             report.pass();
-        } else {
-            fail(report, method, sample, methodSeed, args, error);
-            if (regressions != null) {
-                try { regressions.record(method, args); }
-                catch (Exception e) {
-                    fail(report, method, sample, methodSeed, args, "Could not save regression case: " + trace(e));
-                }
+            return;
+        }
+        Object[] minimal = shrinkBudget == 0 ? args : new PrismShrinker(
+                method, checks, shrinkBudget).minimize(args, violation.category());
+        String detail = "[" + violation.category() + "] " + violation.detail();
+        if (!Arrays.deepEquals(minimal, args)) {
+            detail += " | Original: " + Arrays.deepToString(args)
+                    + " | Minimal reproducer: " + Arrays.deepToString(minimal);
+        }
+        fail(report, method, sample, methodSeed, minimal, detail);
+        if (regressions != null) {
+            try {
+                regressions.record(method, minimal);
+            } catch (Exception e) {
+                fail(report, method, sample, methodSeed, minimal,
+                        "Could not save regression case: " + trace(e));
             }
         }
     }
