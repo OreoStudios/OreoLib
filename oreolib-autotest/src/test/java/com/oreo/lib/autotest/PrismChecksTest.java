@@ -77,6 +77,16 @@ class PrismChecksTest {
     }
 
     @Test
+    void roundTripFindsNonInvertibleTransformations() {
+        TestReport correct = OreoTest.classes(WorkingCodec.class).withFuzzing(30).run();
+        assertEquals(30, correct.passed(), correct.toString());
+        TestReport broken = OreoTest.classes(BrokenCodec.class).withFuzzing(5).run();
+        assertEquals(5, broken.failed(), broken.toString());
+        assertTrue(broken.toString().contains("ROUND_TRIP"));
+        assertEquals("[]", broken.failures().get(0).arguments()); // empty string is a valid fixture
+    }
+
+    @Test
     void invalidRelationsFailExplicitly() {
         TestReport report = OreoTest.classes(InvalidCommutativity.class)
                 .withFuzzing(100).run();
@@ -152,6 +162,20 @@ class PrismChecksTest {
             if (input < -5) throw new IllegalStateException("failure");
             return input;
         }
+    }
+
+    public static class WorkingCodec {
+        @AutoTest
+        @RoundTrip("decode")
+        public String encode(String input) { return "v:" + input; }
+        private String decode(String input) { return input.substring(2); }
+    }
+
+    public static class BrokenCodec {
+        @AutoTest
+        @RoundTrip("decode")
+        public String encode(String input) { return "v:" + input; }
+        private String decode(String input) { return input.substring(1); }
     }
 
     public static class InvalidCommutativity {
