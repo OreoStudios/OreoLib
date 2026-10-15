@@ -19,6 +19,7 @@ import static com.oreo.lib.Oreo.*;
 | `oreolib-gdx` | `com.oreo.lib.gdx` | libGDX helpers: Prefs, Save, Assets, Scene2D UI | libGDX |
 | `oreolib-ecs` | `com.oreo.lib.ecs` | Zero-dependency entity-component-system | none (zero-dep) |
 | `oreolib-mongo` | `com.oreo.lib.mongo` | MongoDB document helpers (not SQL) | MongoDB sync driver |
+| `oreolib-autotest` | `com.oreo.lib.autotest` | Deterministic fuzz/contract tests, regression fixtures, HTML reports | none |
 
 ## Requirements
 
@@ -421,3 +422,114 @@ New `Flow` methods: `sumInt`, `sumDouble`, `countWhere`, `join`, `maxBy`, `minBy
 ## Design goal
 
 If an OreoLib helper is longer or less readable than normal Java, use normal Java. OreoLib removes boilerplate; it does not hide application logic.
+
+
+## AutoTest (oreolib-autotest)
+
+AutoTest is an **opt-in** generated test runner for Java 17+. It discovers marked
+classes/methods, generates primitive, boxed, String and enum input values, checks
+for unexpected exceptions and explicitly declared output contracts, and reports
+reproducible failing cases. Unmarked production methods are **never executed**.
+
+### Mark a class or individual methods
+
+```java
+import com.oreo.lib.autotest.*;
+
+@AutoTest(samples = 200)
+public class Calculator {
+    @ResultRange(min = 0, max = 10000)
+    public int square(@TestRange(min = 0, max = 100) int number) {
+        return number * number;
+    }
+
+    @NotNullResult
+    public String normalize(String text) {
+        return text.trim();
+    }
+}
+```
+
+Marking a class discovers all its **declared public concrete methods**; alternatively
+annotate individual methods with `@AutoTest` (including private ones). For an
+instance method, a no-argument constructor is required. Each invocation uses a new
+instance. This deliberately tests methods with no required state/setup, not all Java
+business logic.
+
+**No handwritten JUnit tests are necessary for marked methods.** To run:
+
+```java
+TestReport report = OreoTest.scan("com.example.myapp")
+    .withFuzzing(500)
+    .withSeed(42L)
+    .withRegressionTests()
+    .run();
+report.writeHtml(Path.of("target/oreolib-autotest/report.html"));
+report.assertSuccess(); // fails the process on a failure or empty discovery
+```
+
+Or explicitly select targets: `OreoTest.classes(Calculator.class).run()`.
+
+For a new project, add the `oreolib-autotest` test-scoped dependency alongside the
+JitPack repository (or use your published OreoLib Maven repository):
+
+```xml
+<dependency>
+    <groupId>com.github.OreoStudios.OreoLib</groupId>
+    <artifactId>oreolib-autotest</artifactId>
+    <version>v2.0.0</version> <!-- use a tag containing AutoTest when released -->
+    <scope>test</scope>
+</dependency>
+```
+
+Add this to your project's Maven `<build><plugins>` to run AutoTest on every
+`mvn verify` and on CI. Choose a package to scan that contains compiled test targets
+and configure your CI to run `mvn verify`.
+
+```xml
+<plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>3.5.0</version>
+    <executions>
+        <execution>
+            <id>oreolib-autotest</id>
+            <phase>verify</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+                <mainClass>com.oreo.lib.autotest.OreoTest</mainClass>
+                <classpathScope>test</classpathScope>
+                <arguments>
+                    <argument>com.example.myapp</argument>
+                    <argument>500</argument>
+                    <argument>target/oreolib-regressions</argument>
+                </arguments>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+The CLI also works with `OreoTest.main(package, samples, regressionDirectory)`
+and writes `target/oreolib-autotest/report.html`. When regression replay is enabled,
+new failures are stored as `*.cases` files under `target/oreolib-regressions`.
+Copy those files into a version-controlled fixture directory and pass its path to
+`withRegressionTests(Path)` to retain them across clean CI builds. Same seed,
+method signatures, Java versions and fixtures produce reproducible generated cases.
+
+### What AutoTest can and cannot prove
+
+- Tests include inclusive numeric boundaries, zero, generated values and enum options.
+  String inputs include empty and basic ASCII values. No null inputs are generated
+  unless replaying an existing fixture that contains null.
+- `@NotNullResult` and `@ResultRange` check returned values. Use `@ExpectThrows`
+  only when every generated invocation should throw the specified exception.
+- Supported generated parameter types: Java primitives, their boxed counterparts,
+  String and enums. Unsupported objects or a missing constructor are **reported as
+  failures** rather than being silently skipped.
+- This is contract-driven **fuzz testing**, not AI-derived unit-test expectations:
+  successful execution does **not** prove correct business behavior. For domain
+  invariants, side effects, database workflows or object graphs, write tests too.
+- Do not annotate production methods with destructive side effects or external
+  API calls without isolating those effects: AutoTest really invokes each method.
+
