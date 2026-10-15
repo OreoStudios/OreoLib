@@ -37,7 +37,8 @@ final class RegressionStore {
             try {
                 for (int i = 0; i < parts.length; i++) {
                     if (parts[i].equals("~")) { args[i] = null; continue; }
-                    String raw = new String(DECODER.decode(parts[i]), StandardCharsets.UTF_8);
+                    String encoded = parts[i].startsWith(".") ? parts[i].substring(1) : parts[i];
+                    String raw = new String(DECODER.decode(encoded), StandardCharsets.UTF_8);
                     args[i] = decode(types[i], raw);
                 }
             } catch (RuntimeException e) {
@@ -51,7 +52,7 @@ final class RegressionStore {
     void record(Method method, Object[] args) throws IOException {
         List<String> parts = new ArrayList<>();
         for (Object arg : args) {
-            parts.add(arg == null ? "~" : ENCODER.encodeToString(
+            parts.add(arg == null ? "~" : "." + ENCODER.encodeToString(
                     String.valueOf(arg instanceof Enum<?> e ? e.name() : arg).getBytes(StandardCharsets.UTF_8)));
         }
         String line = args.length == 0 ? "-" : String.join("|", parts);
