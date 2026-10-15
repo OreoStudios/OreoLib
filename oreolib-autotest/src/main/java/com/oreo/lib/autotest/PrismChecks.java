@@ -20,6 +20,8 @@ final class PrismChecks {
     private final MetamorphicRule[] rules;
     private final Method reference;
     private final Constructor<?> referenceConstructor;
+    private final Method inverse;
+    private final Constructor<?> inverseConstructor;
 
     PrismChecks(Method method, Constructor<?> constructor) throws ReflectiveOperationException {
         this.method = method;
@@ -78,6 +80,30 @@ final class PrismChecks {
             }
             reference.setAccessible(true);
         }
+        RoundTrip roundTrip = method.getAnnotation(RoundTrip.class);
+        if (roundTrip == null) {
+            inverse = null;
+            inverseConstructor = null;
+        } else {
+            if (method.getParameterCount() != 1 || method.getReturnType() == void.class) {
+                throw new IllegalArgumentException("@RoundTrip requires a unary function with a return value");
+            }
+            if (method.isAnnotationPresent(ExpectThrows.class)) {
+                throw new IllegalArgumentException("@RoundTrip cannot be combined with @ExpectThrows");
+            }
+            Class<?> owner = roundTrip.in() == Void.class ? method.getDeclaringClass() : roundTrip.in();
+            inverse = owner.getDeclaredMethod(roundTrip.value(), method.getReturnType());
+            if (inverse.equals(method) || inverse.getReturnType() != method.getParameterTypes()[0]) {
+                throw new IllegalArgumentException("@RoundTrip inverse must accept the forward output and return its input type");
+            }
+            if (!Modifier.isStatic(inverse.getModifiers())) {
+                inverseConstructor = owner.getDeclaredConstructor();
+                inverseConstructor.setAccessible(true);
+            } else {
+                inverseConstructor = null;
+            }
+            inverse.setAccessible(true);
+        }
     }
 
     Violation check(Object[] args) {
@@ -135,6 +161,15 @@ final class PrismChecks {
                 return new Violation("DIFFERENTIAL",
                         "Behavioral drift against " + reference.toGenericString()
                         + ": candidate=" + display(first) + ", reference=" + display(other));
+            }
+        }
+        if (inverse != null) {
+            Outcome reconstructed = call(inverse, inverseConstructor, new Object[] {first.value()});
+            if (reconstructed.exception() != null || !Objects.deepEquals(args[0], reconstructed.value())) {
+                return new Violation("ROUND_TRIP",
+                        "Round-trip invariant failed: input=" + Arrays.deepToString(args)
+                        + ", forward=" + display(first)
+                        + ", inverse=" + display(reconstructed));
             }
         }
         return null;
