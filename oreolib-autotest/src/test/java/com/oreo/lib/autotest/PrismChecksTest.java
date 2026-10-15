@@ -87,6 +87,27 @@ class PrismChecksTest {
     }
 
     @Test
+    void adversarialUnicodeTextFindsHiddenCrashes() {
+        TestReport report = OreoTest.classes(TextOnlyBug.class).withFuzzing(12).withShrinking(100).run();
+        assertTrue(report.failed() >= 1, report.toString());
+        assertTrue(report.toString().contains("IllegalStateException"), report.toString());
+    }
+
+    @Test
+    void nullMustBeExplicitlyOptedInto() {
+        TestReport report = OreoTest.classes(NullBug.class).withFuzzing(2).run();
+        assertEquals(1, report.failed(), report.toString());
+        assertEquals("[null]", report.failures().get(0).arguments());
+    }
+
+    @Test
+    void invalidInputAnnotationsFailExplicitly() {
+        TestReport report = OreoTest.classes(BadAdversarialInput.class).withFuzzing(10).run();
+        assertEquals(1, report.failed());
+        assertTrue(report.toString().contains("@AdversarialInput requires String"));
+    }
+
+    @Test
     void invalidRelationsFailExplicitly() {
         TestReport report = OreoTest.classes(InvalidCommutativity.class)
                 .withFuzzing(100).run();
@@ -176,6 +197,24 @@ class PrismChecksTest {
         @RoundTrip("decode")
         public String encode(String input) { return "v:" + input; }
         private String decode(String input) { return input.substring(1); }
+    }
+
+    public static class TextOnlyBug {
+        @AutoTest
+        public String normalize(@AdversarialInput String text) {
+            if (text.indexOf((char) 0x202E) >= 0) throw new IllegalStateException("BiDi bug");
+            return text;
+        }
+    }
+
+    public static class NullBug {
+        @AutoTest
+        public int size(@NullableInput String text) { return text.length(); }
+    }
+
+    public static class BadAdversarialInput {
+        @AutoTest
+        public int process(@AdversarialInput int input) { return input; }
     }
 
     public static class InvalidCommutativity {
