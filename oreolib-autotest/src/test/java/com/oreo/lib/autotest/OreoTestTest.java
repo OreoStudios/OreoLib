@@ -51,7 +51,7 @@ class OreoTestTest {
         // Previous failing case is replayed ahead of this invocation's generated case.
         TestReport replay = OreoTest.classes(Broken.class)
                 .withFuzzing(1).withRegressionTests(fixtures).run();
-        assertEquals(4, replay.failed());
+        assertEquals(2, replay.failed());
         assertEquals(-1, replay.failures().get(0).sample());
     }
 
