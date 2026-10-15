@@ -69,7 +69,14 @@ final class ArgumentGenerator {
                     double v = sample == 0 ? lo : sample == 1 ? hi
                             : sample == 2 && lo <= 0 && hi >= 0 ? 0
                             : lo + random.nextDouble() * (hi - lo);
-                    args[i] = type == float.class || type == Float.class ? (float) v : v;
+                    // A float/double ternary promotes both operands to double (JLS 15.25),
+                    // producing Double even for a float parameter. Reflection cannot
+                    // unbox Double into float, so preserve the exact wrapper type.
+                    if (type == float.class || type == Float.class) {
+                        args[i] = Float.valueOf((float) v);
+                    } else {
+                        args[i] = Double.valueOf(v);
+                    }
                 }
             } else if (type == boolean.class || type == Boolean.class) {
                 args[i] = sample == 0 ? false : sample == 1 || random.nextBoolean();
