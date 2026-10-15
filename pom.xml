@@ -38,6 +38,7 @@
         <module>oreolib-gdx</module>
         <module>oreolib-ecs</module>
         <module>oreolib-mongo</module>
+        <module>oreolib-autotest</module>
     </modules>
 
     <properties>
