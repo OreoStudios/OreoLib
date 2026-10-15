@@ -10,9 +10,17 @@ final class ArgumentGenerator {
 
     /** Non-destructive, deterministic text stress corpus. Requires @AdversarialInput. */
     private static final String[] ADVERSARIAL = {
-            "", " ", "\\t\\n", "\\0", "cafe\\u0301", "\\uD83D\\uDE80",
-            "\\u202EXYZ", "../etc/passwd", "<script>alert(1)</script>",
-            "' OR '1'='1", "{\\\"nested\\\":[null,true]}",
+            "",
+            " ",
+            "\t\n",
+            String.valueOf((char) 0),
+            "café",
+            "🚀",
+            String.valueOf((char) 0x202E) + "XYZ",
+            "../etc/passwd",
+            "<script>alert(1)</script>",
+            "\' OR \'1\'=\'1",
+            "{\"nested\":[null,true]}",
             "x".repeat(4096)
     };
 
